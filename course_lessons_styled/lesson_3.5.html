@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 3.5: Бот, который пишет в Google Таблицу: сбор данных через чат</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 3.5. Бот, который пишет в Google Таблицу: сбор данных через чат</h1>
+    
+    <div class="lesson-content">
+        <h2>1. Суть инструмента: Google Sheets как база данных</h2>
+<p>Google Sheets в контексте автоматизации — это хранилище структурированных данных, к которому n8n обращается через API. В отличие от ручного ввода, автоматизация позволяет записывать данные в таблицу построчно в момент выполнения события (например, ответа пользователя в чате).</p>
+<p>Механизм работы строится на методе <strong>Append (Добавление)</strong>. Каждый входящий запрос из Telegram преобразуется в объект JSON, который n8n отправляет в Google Sheets. Таблица автоматически находит первую пустую строку и записывает туда значения из полей, которые вы указали в настройках ноды.</p>
+
+<h2>2. Разбор интерфейса и логики Google Sheets в n8n</h2>
+<p>Для интеграции Google Sheets в n8n используются следующие элементы интерфейса:</p>
+<ul>
+    <li><strong>Credential (Учетные данные):</strong> Нода требует подключения через OAuth2. Вы должны выбрать Google Sheets API и предоставить n8n доступ к конкретной таблице или всему аккаунту Google Drive.</li>
+    <li><strong>Resource и Operation:</strong> В параметрах ноды Google Sheets выберите Resource: <strong>Row</strong> и Operation: <strong>Append</strong>. Это критически важно для добавления новых данных без удаления старых.</li>
+    <li><strong>Document ID:</strong> Поле, куда вставляется уникальный идентификатор вашей таблицы (строка символов из URL-адреса таблицы между <code>/d/</code> и <code>/edit</code>).</li>
+    <li><strong>Sheet Name:</strong> Точное имя вкладки внизу таблицы (например, <code>Sheet1</code>). Регистр и наличие пробелов имеют значение.</li>
+    <li><strong>Columns Mapping (Сопоставление колонок):</strong> Интерфейс предлагает секцию <strong>Columns to Send</strong>. В левом поле (Key) вы вписываете название заголовка вашей колонки в таблице (например, "Имя" или "Выбор"), а в правом (Value) — выражение <code>{{ $json.callback_query.data }}</code>, которое берется из данных Telegram-триггера методом Drag-and-Drop из панели вывода данных (Output).</li>
+    <li><strong>Mapping Mode:</strong> Используйте режим <strong>Define Below</strong>. Он позволяет вручную задать соответствие каждой колонке таблицы конкретному параметру, полученному из предыдущих нод цепочки.</li>
+</ul>
+
+<p>При передаче данных важно соблюдать порядок: <strong>Telegram Trigger</strong> (получение события) -> <strong>Switch</strong> (логический выбор) -> <strong>Google Sheets</strong> (запись результата в выбранную ветку).</p>
+
+<h2>1. Пошаговая инструкция настройки</h2>
+<ul>
+    <li>В рабочей области n8n добавьте ноду <strong>Google Sheets</strong> и соедините её с выходом ноды <strong>Switch</strong> (для каждого пути отдельно).</li>
+    <li>В настройках ноды Google Sheets нажмите на поле <strong>Credential</strong>, выберите <strong>Create New</strong> и пройдите авторизацию в вашем Google-аккаунте.</li>
+    <li>В поле <strong>Document</strong> выберите нужный файл через поиск или вставьте <strong>Spreadsheet ID</strong> из адресной строки браузера.</li>
+    <li>В поле <strong>Sheet</strong> укажите название листа (например, <code>Лист1</code>).</li>
+    <li>Нажмите кнопку <strong>Add Field</strong> в разделе <strong>Columns to Send</strong>.</li>
+    <li>В поле <strong>Key</strong> напишите название заголовка вашей колонки (например, <code>Ответ</code>).</li>
+    <li>Нажмите на иконку шестеренки (или плюса) рядом с полем <strong>Value</strong>, перейдите во вкладку <strong>Expression</strong> и перетащите мышкой (Drag-and-Drop) переменную <code>data</code> из структуры <code>Telegram Trigger</code> или выберите соответствующее значение из списка <strong>Input Data</strong>.</li>
+</ul>
+
+<h2>2. Ошибки и их решение</h2>
+<ul>
+    <li><strong>Ошибка "404 Not Found" или "Requested entity was not found":</strong> Вы неверно указали <strong>Document ID</strong> или у n8n нет прав доступа к файлу. <em>Решение:</em> Проверьте, чтобы ID был скопирован целиком из URL (от <code>/d/</code> до следующего <code>/edit</code>), и убедитесь, что Google-аккаунт в Credential совпадает с владельцем таблицы.</li>
+    <li><strong>Ошибка "Invalid JSON" или "Data Mismatch":</strong> Попытка записать массив данных в одну ячейку. <em>Решение:</em> Убедитесь, что в поле <strong>Value</strong> вы передаете конкретное строковое значение (например, <code>option_a</code>), а не весь объект целиком.</li>
+    <li><strong>Несоответствие заголовков:</strong> Данные записываются не в тот столбец. <em>Решение:</em> В поле <strong>Key</strong> название должно строго совпадать с заголовком в первой строке вашей Google Таблицы (учитывая регистр и лишние пробелы).</li>
+</ul>
+
+<h2>3. Практическое задание</h2>
+<ol>
+    <li>Подготовьте таблицу: в первой строке (ячейка A1) напишите слово <code>Ответ</code>.</li>
+    <li>Настройте ноду <strong>Google Sheets</strong> в обеих ветках (А и Б) вашего сценария так, чтобы при выборе кнопки в таблицу записывался текст "Выбран вариант А" или "Выбран вариант Б".</li>
+    <li>Запустите выполнение сценария кнопкой <strong>Test Step</strong>.</li>
+    <li>Откройте Google Таблицу в соседней вкладке и убедитесь, что при каждом нажатии на кнопку в Telegram в таблице появляется новая строка с соответствующим текстом.</li>
+    <li>Добавьте в таблицу вторую колонку (ячейка B1) с названием <code>Время</code> и используйте встроенную функцию n8n <code>{{ $now }}</code> в поле <strong>Value</strong> для автоматической фиксации времени клика.</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_3_5: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

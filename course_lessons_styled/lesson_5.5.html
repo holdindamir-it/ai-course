@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 5.5: Генерация документов и ответов по шаблону с помощью OpenAI</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 5.5. Генерация документов и ответов по шаблону с помощью OpenAI</h1>
+    
+    <div class="lesson-content">
+        <h2>Генерация контента через OpenAI: принципы работы</h2>
+<p>Интеграция с OpenAI в n8n работает как посредник между входными данными (Webhook) и алгоритмом обработки естественного языка. Вы передаете текст в модель через API, указываете системную инструкцию (System Prompt), а модель возвращает структурированный ответ, который затем парсится (разбирается) нодами для дальнейших действий.</p>
+<p>Технически это происходит так: текст из Webhook упаковывается в JSON-объект, отправляется на сервер OpenAI, где обрабатывается нейросетью согласно заданным вами параметрам (температура, модель), и возвращается обратно в n8n как массив данных, доступных для использования в следующих узлах сценария.</p>
+
+<h3>Интерфейс и настройка ноды OpenAI</h3>
+<ul>
+    <li><strong>Credential (Учетные данные):</strong> Выберите созданный API Key. Если он отсутствует, нажмите "Create New", вставьте ключ, полученный в личном кабинете OpenAI, и сохраните.</li>
+    <li><strong>Resource (Ресурс):</strong> Выберите <strong>Chat</strong>. Это основной интерфейс для работы с текстовыми моделями.</li>
+    <li><strong>Operation (Операция):</strong> Установите значение <strong>Complete</strong>.</li>
+    <li><strong>Model (Модель):</strong> Выберите версию, например, gpt-3.5-turbo или gpt-4o-mini для базовых задач классификации.</li>
+    <li><strong>Messages (Сообщения):</strong> Это основной блок логики. Вам нужно добавить два типа сообщений через кнопку "Add Message":
+        <ul>
+            <li><strong>System:</strong> Здесь прописывается инструкция. Пример: "Ты классификатор. Анализируй текст и ответь строго одним словом: 'тариф' или 'отзыв'".</li>
+            <li><strong>User:</strong> Сюда через выражение (Expression) передается текст, пришедший из ноды Webhook.</li>
+        </ul>
+    </li>
+    <li><strong>Options (Дополнительные параметры):</strong>
+        <ul>
+            <li><strong>Temperature:</strong> Установите на 0. Это критически важно для классификации, чтобы исключить вариативность и сделать ответы модели предсказуемыми.</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>Логика передачи данных в ноду Switch</h3>
+<p>После получения ответа от OpenAI, данные сохраняются в объекте JSON. Чтобы направить их в Switch:</p>
+<ul>
+    <li>Откройте настройки ноды <strong>Switch</strong>.</li>
+    <li>В поле <strong>Data Type</strong> выберите <strong>String</strong>.</li>
+    <li>В поле <strong>Value 1</strong> вставьте выражение, ссылающееся на поле ответа OpenAI (обычно это <code>{{ $json.message.content }}</code>).</li>
+    <li>В разделе <strong>Rules</strong> выберите <strong>String</strong> -> <strong>Equal</strong>.</li>
+    <li>Для правила 1 укажите значение <strong>тариф</strong> и направьте поток в Telegram.</li>
+    <li>Для правила 2 укажите значение <strong>отзыв</strong> и направьте поток в Google Sheets.</li>
+</ul>
+
+<h3>Пошаговая настройка цепочки</h3>
+<ul>
+    <li>В рабочей области n8n перетащите ноду <strong>Webhook</strong>. В поле <strong>HTTP Method</strong> выберите POST. Скопируйте <strong>Test URL</strong> для вставки в Postman.</li>
+    <li>Добавьте ноду <strong>OpenAI</strong>, соедините её с Webhook. В настройках сообщения <strong>User</strong> нажмите на иконку шестеренки рядом с полем ввода и выберите <strong>Add Expression</strong>. В открывшемся окне перетащите переменную <code>body</code> из входных данных Webhook.</li>
+    <li>Добавьте ноду <strong>Switch</strong>. В поле <strong>Data Type</strong> выберите String. В поле <strong>Value 1</strong> через Expression выберите путь: <code>{{ $json.message.content }}</code>.</li>
+    <li>В разделе <strong>Rules</strong> нажмите <strong>Add Rule</strong> дважды. В первом правиле выберите <strong>Equals</strong> и впишите <code>тариф</code>. Во втором — <strong>Equals</strong> и впишите <code>отзыв</code>.</li>
+    <li>К выходам <strong>Switch</strong> (названным согласно правилам) подключите соответствующие ноды: <strong>Telegram</strong> (отправка сообщения) и <strong>Google Sheets</strong> (добавление строки).</li>
+</ul>
+
+<h3>Технические причины сбоев и методы устранения</h3>
+<ul>
+    <li><strong>Несоответствие формата ответа:</strong> OpenAI может добавить лишние пробелы или точки в ответ. 
+    <br><em>Решение:</em> В настройках ноды OpenAI измените системный промпт на: "Ответь строго одним словом без знаков препинания и пробелов: 'тариф' или 'отзыв'". В ноде Switch используйте функцию <code>.trim()</code> в выражении (например, <code>{{ $json.message.content.trim() }}</code>).</li>
+    <li><strong>Тайм-аут API:</strong> Модель долго генерирует ответ, и Webhook закрывает соединение. 
+    <br><em>Решение:</em> В настройках ноды Webhook установите параметр <strong>Respond</strong> в режим <strong>Immediate Response</strong>, чтобы не ждать окончания обработки сценария.</li>
+    <li><strong>Отсутствие данных на входе:</strong> Если в Webhook не пришло поле с текстом, нода OpenAI выдаст ошибку 400. 
+    <br><em>Решение:</em> Добавьте ноду <strong>If</strong> сразу после Webhook. Проверьте наличие ключа <code>body.message</code>. Если он пуст — направьте поток в <strong>Error Trigger</strong> или ноду <strong>HTTP Respond</strong> с кодом 400.</li>
+</ul>
+
+<h3>Практическое задание для закрепления</h3>
+<ul>
+    <li>Создайте в Telegram-боте канал или чат, куда будут приходить уведомления по тарифам.</li>
+    <li>В Google Таблице создайте столбцы "Дата" и "Текст отзыва", настройте подключение через ноду Google Sheets (OAuth2).</li>
+    <li>Протестируйте сценарий через Postman, отправив JSON: <code>{"message": "Сколько стоит подписка?"}</code> и убедитесь, что сработала ветка Telegram.</li>
+    <li>Отправьте JSON: <code>{"message": "Ваш сервис ужасен"}</code> и проверьте появление новой строки в Google Таблице.</li>
+    <li>Если данные попадают в "пустую" ветку Switch, добавьте ноду <strong>Sticky Note</strong> (заметка) на поле и пропишите в ней условие обработки неизвестных сообщений.</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_5_5: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

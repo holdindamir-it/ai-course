@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 5.6: Альтернативы OpenAI: Mistral, Claude API, Gemini (через HTTP Request)</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 5.6. Альтернативы OpenAI: Mistral, Claude API, Gemini (через HTTP Request)</h1>
+    
+    <div class="lesson-content">
+        <h2>Принцип работы HTTP Request для взаимодействия с LLM</h2>
+<p>Внешние языковые модели (Mistral, Claude, Gemini) предоставляют доступ к своим мощностям через API. Для взаимодействия с ними в n8n не используются специализированные ноды, а применяется универсальная нода <strong>HTTP Request</strong>. По сути, это отправка структурированного JSON-запроса на определенный адрес (Endpoint) провайдера с передачей уникального ключа доступа в заголовках (Headers). Ответ от сервера приходит в том же формате, который затем парсится для извлечения текстового результата.</p>
+
+<h3>Интерфейс и настройка ноды HTTP Request</h3>
+<p>Для подключения сторонней модели в n8n необходимо выполнить следующие действия в интерфейсе ноды HTTP Request:</p>
+<ul>
+    <li><strong>Method:</strong> Выбирается <code>POST</code>, так как мы отправляем данные для обработки.</li>
+    <li><strong>URL:</strong> Указывается адрес API провайдера (например, <code>https://api.anthropic.com/v1/messages</code> для Claude или <code>https://generativelanguage.googleapis.com/...</code> для Gemini).</li>
+    <li><strong>Authentication:</strong> Выбирается тип <code>Header Auth</code>. В поле <strong>Name</strong> вводится ключ авторизации (например, <code>x-api-key</code> для Claude), а в <strong>Value</strong> — токен, полученный в личном кабинете разработчика модели.</li>
+    <li><strong>Send Body:</strong> Устанавливается значение <code>true</code>.</li>
+    <li><strong>Body Parameters:</strong> Выбирается формат <code>JSON</code>. В открывшемся поле ввода формируется тело запроса. Оно строго соответствует документации API конкретной модели и обычно содержит параметры <code>model</code> (название версии ИИ) и <code>messages</code> (массив объектов с текстом пользователя).</li>
+    <li><strong>Response Format:</strong> Устанавливается <code>JSON</code>, чтобы n8n автоматически преобразовал ответ сервера в объект, доступный для дальнейшей обработки в следующих нодах сценария.</li>
+</ul>
+
+<p>Важно: каждая модель имеет уникальную структуру JSON-запроса. Перед заполнением поля Body необходимо открыть документацию API (например, API Reference для Gemini) и скопировать структуру тела запроса, заменив статические данные на динамические переменные из предыдущих нод через выражение <code>{{ $json.message }}</code>.</p>
+
+<h3>Пошаговая настройка интеграции (на примере Anthropic Claude)</h3>
+<ul>
+    <li>Откройте редактор n8n, перетащите на рабочее поле ноду <strong>HTTP Request</strong>.</li>
+    <li>В параметре <strong>Method</strong> выберите <code>POST</code>.</li>
+    <li>В поле <strong>URL</strong> вставьте официальный API endpoint (например, <code>https://api.anthropic.com/v1/messages</code>).</li>
+    <li>Перейдите в раздел <strong>Authentication</strong>, выберите <code>Header Auth</code>, нажмите <strong>Create New Credential</strong>. В поле <strong>Name</strong> введите <code>x-api-key</code>, в <strong>Value</strong> — ваш секретный токен из консоли разработчика.</li>
+    <li>В поле <strong>Send Body</strong> поставьте <code>true</code>, выберите формат <strong>JSON</strong>.</li>
+    <li>В поле <strong>JSON Parameters</strong> нажмите <strong>Add Option</strong> -> <strong>Body Parameters</strong>. Нажмите кнопку <strong>Add Field</strong>, выберите тип <code>Object</code>, назовите его <code>messages</code>, добавьте внутрь строку <code>content</code> и вставьте переменную из предыдущего узла через выражение <code>{{ $json.text }}</code>.</li>
+    <li>Нажмите <strong>Execute Node</strong> для проверки связи.</li>
+</ul>
+
+<h3>Типичные ошибки и методы их устранения</h3>
+<ul>
+    <li><strong>Ошибка 401 Unauthorized:</strong> Возникает из-за неверного ключа или ошибки в названии заголовка. <strong>Решение:</strong> Проверьте в разделе <strong>Authentication</strong>, совпадает ли имя заголовка с тем, что требует документация API конкретного сервиса.</li>
+    <li><strong>Ошибка 400 Bad Request (Malformed JSON):</strong> Возникает при нарушении структуры JSON-тела. <strong>Решение:</strong> Убедитесь, что все открывающие скобки <code>{</code> имеют соответствующие закрывающие <code>}</code>, а вложенные массивы данных соответствуют формату, указанному в документации провайдера.</li>
+    <li><strong>Ошибка 429 Too Many Requests:</strong> Возникает при исчерпании лимитов на количество запросов в минуту. <strong>Решение:</strong> Добавьте ноду <strong>Wait</strong> перед HTTP Request, чтобы принудительно замедлить выполнение сценария.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+<ul>
+    <li>Зарегистрируйтесь в консоли Google AI Studio, получите API Key для модели Gemini.</li>
+    <li>Добавьте ноду <strong>HTTP Request</strong> в свой текущий сценарий после получения сообщения из Telegram.</li>
+    <li>Настройте ноду так, чтобы текст из Telegram передавался в параметр <code>parts</code> (текстовое сообщение) модели Gemini.</li>
+    <li>Используйте ноду <strong>Edit Fields (Set)</strong> после HTTP Request, чтобы извлечь только текст ответа из длинного JSON-ответа, который присылает сервер.</li>
+    <li>Соедините выход этой ноды с нодой <strong>Telegram (Send Message)</strong>, чтобы бот отвечал пользователю сгенерированным текстом.</li>
+    <li>Протестируйте сценарий, отправив боту произвольный вопрос, и убедитесь, что в Telegram приходит ответ от модели.</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_5_6: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

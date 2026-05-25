@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 6.1: Airtable как база данных для автоматизации: подключение и работа</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 6.1. Airtable как база данных для автоматизации: подключение и работа</h1>
+    
+    <div class="lesson-content">
+        <h2>1. Суть инструмента: Airtable как структурированное хранилище</h2>
+<p>Airtable — это реляционная база данных с графическим интерфейсом, представленная в виде таблиц. В контексте автоматизации n8n, Airtable выступает как хранилище данных (состояний), где каждая строка является записью (record), а столбцы — полями с жестко заданным типом данных (текст, число, дата, чекбокс).</p>
+<p>Принципиальное отличие от Excel заключается в наличии API-ключа и уникального идентификатора таблицы (Table ID), которые позволяют n8n обращаться к конкретным ячейкам, обновлять их или создавать новые записи без прямого участия пользователя в интерфейсе самого Airtable.</p>
+
+<h2>2. Интерфейс и логика интеграции в n8n</h2>
+<p>Для работы Airtable в n8n используются следующие технические компоненты:</p>
+<ul>
+    <li><strong>Credential (Учетные данные):</strong> В меню «Credentials» необходимо создать запись типа «Airtable API». Для авторизации используется Personal Access Token, генерируемый в настройках профиля Airtable. Он предоставляет право на чтение и запись в конкретные базы (Base).</li>
+    <li><strong>Node Airtable:</strong> Основной инструмент для взаимодействия. Внутри ноды присутствуют следующие параметры:
+        <ul>
+            <li><strong>Operation:</strong> Выбор действия — «Create» (создать строку), «Get» (получить данные), «Update» (изменить существующую запись) или «List» (вывести все записи).</li>
+            <li><strong>Base ID:</strong> Уникальный идентификатор базы, отображается в URL вашего браузера при открытии таблицы (начинается с <code>app...</code>).</li>
+            <li><strong>Table Name:</strong> Точное имя таблицы внутри базы. Регистр имеет значение.</li>
+        </ul>
+    </li>
+    <li><strong>Mapping Fields:</strong> После выбора таблицы, n8n автоматически подгружает список доступных колонок. Вы используете кнопку «Add Field» для сопоставления данных, пришедших из предыдущих нод (например, из Telegram или Gemini), с конкретными колонками в Airtable.</li>
+    <li><strong>Filter/Query (при операции List):</strong> Позволяет задать условие выборки через формулу Airtable, например, <code>{Статус} = 'В работе'</code>, чтобы отфильтровать записи на стороне базы перед передачей данных в n8n.</li>
+</ul>
+
+<h2>1. Пошаговая инструкция по настройке</h2>
+<ul>
+    <li>Откройте Airtable в браузере, создайте новую базу и переименуйте колонки: «Message» (тип Single line text) и «Status» (тип Single select).</li>
+    <li>В n8n перетащите ноду <strong>Airtable</strong> на рабочее поле.</li>
+    <li>Нажмите на поле <strong>Credential</strong> — <strong>Create New</strong>. Вставьте <strong>Personal Access Token</strong>, полученный в разделе Developer Hub вашего аккаунта Airtable.</li>
+    <li>В параметре <strong>Operation</strong> выберите «Create».</li>
+    <li>В поле <strong>Base</strong> выберите созданную базу из выпадающего списка. Аналогично выберите <strong>Table</strong>.</li>
+    <li>Нажмите кнопку <strong>Add Field</strong>, выберите «Message». Нажмите на иконку шестеренки справа от поля ввода — <strong>Expression</strong>. В открывшемся окне перетащите переменную с текстом из предыдущей ноды (например, из Telegram Trigger).</li>
+    <li>Нажмите <strong>Execute Node</strong> для отправки тестовой строки в базу.</li>
+</ul>
+
+<h2>2. Ошибки и методы их устранения</h2>
+<ul>
+    <li><strong>Ошибка 404 (Table/Base not found):</strong> Возникает, если вы изменили название таблицы в интерфейсе Airtable, а n8n продолжает искать старое имя. <em>Решение:</em> Перезайдите в настройки ноды Airtable и обновите выбор Table в выпадающем списке.</li>
+    <li><strong>Ошибка 403 (Permission denied):</strong> Возникает, если у токена доступа нет прав на чтение/запись конкретной базы. <em>Решение:</em> В настройках API в Airtable убедитесь, что вы выдали токену (Scopes) права <code>data.records:write</code> и <code>data.records:read</code>, а также добавили конкретную базу в разделе <strong>Access</strong>.</li>
+    <li><strong>Ошибка типа данных (Invalid Value):</strong> Возникает при попытке записать текст в поле типа «Single select», если такого значения еще нет в списке. <em>Решение:</em> Заранее создайте все варианты выбора (опции) в самой таблице Airtable через интерфейс или убедитесь, что вводимый текст идентичен существующему варианту.</li>
+</ul>
+
+<h2>3. Практическое задание</h2>
+<ul>
+    <li>Создайте цепочку: <strong>Telegram Trigger</strong> -> <strong>Airtable (Create)</strong>.</li>
+    <li>Настройте запись так, чтобы каждое сообщение из Telegram сохранялось в Airtable в колонку «Message».</li>
+    <li>Добавьте вторую ноду Airtable (операция <strong>Update</strong>), которая срабатывает сразу после записи: она должна менять статус в колонке «Status» на значение «Processed». Для этого вам потребуется поле <strong>Record ID</strong>, которое передается в качестве выходного параметра первой ноды Airtable.</li>
+    <li>Проверьте результат в интерфейсе Airtable: после выполнения сценария строка должна появиться и мгновенно изменить статус с пустого на «Processed».</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_6_1: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

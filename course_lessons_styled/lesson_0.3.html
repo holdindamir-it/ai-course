@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 0.3: Регистрация и первый запуск n8n (облако бесплатно)</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 0.3. Регистрация и первый запуск n8n (облако бесплатно)</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть инструмента n8n</h2>
+<p>n8n — это система автоматизации рабочих процессов, построенная на визуальном редакторе узлов (нод). Каждый процесс представляет собой цепочку действий, где одна нода передает данные следующей. Система оперирует объектами JSON (JavaScript Object Notation), перенося информацию между API различных сервисов без написания программного кода.</p>
+<p>Технически n8n работает как серверная среда исполнения: она принимает входящий запрос (триггер), обрабатывает его через логические блоки и отправляет результат в стороннюю систему через HTTP-запросы. Вы визуально строите граф, где связи — это потоки данных, а ноды — точки их трансформации.</p>
+
+<h3>Интерфейс и логика работы</h3>
+<ul>
+    <li><strong>Canvas (Рабочее поле):</strong> Центральная область, где происходит сборка логической схемы. Перетаскивание нод осуществляется из боковой панели.</li>
+    <li><strong>Nodes (Ноды):</strong> Блоки функционала. Бывают двух типов: <em>Trigger</em> (стартовая нода, запускающая процесс) и <em>Action</em> (нода, выполняющая действие).</li>
+    <li><strong>Connections (Связи):</strong> Линии, соединяющие точки вывода (output) одной ноды с точками ввода (input) другой. Передача данных идет строго слева направо.</li>
+    <li><strong>Configuration Panel (Панель настроек):</strong> Открывается при клике на ноду. Содержит поля для авторизации (Credentials), параметры API-запроса и настройки времени ожидания (Timeout).</li>
+    <li><strong>Test URL / Production URL:</strong> Уникальные адреса, которые n8n предоставляет для каждой Webhook-ноды. Это конечные точки (endpoints), на которые отправляются внешние POST-запросы для запуска автоматизации.</li>
+    <li><strong>Execution View:</strong> Режим отображения данных. После запуска процесса на линиях связи появляются кружки с превью данных. Зеленая подсветка означает успешную передачу пакета данных, красная — ошибку выполнения.</li>
+    <li><strong>Execute Workflow:</strong> Кнопка принудительного запуска логической схемы в тестовом режиме. Используется для отладки перед публикацией процесса (активацией).</li>
+</ul>
+
+<h3>Пошаговая инструкция по регистрации и запуску</h3>
+<ul>
+    <li>Перейдите на сайт n8n.cloud и нажмите <em>Sign up</em>, используя почту или Google-аккаунт для создания экземпляра.</li>
+    <li>После входа в интерфейс нажмите кнопку <em>Templates</em> или <em>Blank workflow</em> для начала работы.</li>
+    <li>В панели поиска слева введите <em>Webhook</em> и перетащите его на Canvas.</li>
+    <li>Кликните по ноде <em>Webhook</em>. В поле <em>HTTP Method</em> выберите <em>POST</em>. Скопируйте содержимое поля <em>Test URL</em> — оно понадобится для отправки тестового запроса.</li>
+    <li>Нажмите кнопку <em>Listen for Test Event</em> в нижней части окна ноды. Индикатор начнет мигать, ожидая входящий запрос.</li>
+    <li>Внешним инструментом (Postman) отправьте POST-запрос на скопированный URL, добавив в теле запроса (JSON) ключ <em>user_query</em>.</li>
+    <li>После получения данных нода Webhook отобразит входящий JSON во вкладке <em>Output</em>.</li>
+</ul>
+
+<h3>Технические причины сбоев и способы решения</h3>
+<ul>
+    <li><strong>Неверный HTTP метод:</strong> Вы отправляете данные методом GET, а нода настроена на POST. <strong>Решение:</strong> Убедитесь, что в настройках ноды Webhook и в программе-отправителе выбран один и тот же метод (POST).</li>
+    <li><strong>Отсутствие активации процесса:</strong> Вы используете <em>Production URL</em>, но нода не переведена в активный режим. <strong>Решение:</strong> Нажмите переключатель <em>Active</em> в верхнем правом углу экрана n8n для сохранения и постоянной работы Webhook.</li>
+    <li><strong>Тайм-аут соединения:</strong> Внешний сервис (например, OpenAI) не успел ответить за отведенное время. <strong>Решение:</strong> Зайдите в <em>Settings</em> целевой ноды, найдите параметр <em>Timeout</em> и установите значение 120 секунд.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+<ol>
+    <li>Создайте новый Workflow и добавьте в него ноду <em>Webhook</em>.</li>
+    <li>Установите значение <em>Path</em> для Webhook, например, "test-endpoint".</li>
+    <li>Скопируйте <em>Test URL</em> и отправьте запрос из Postman/Browser-расширения с параметром {"user_query": "Проверка связи"}.</li>
+    <li>В интерфейсе n8n проверьте, отображается ли JSON в окне предпросмотра ноды Webhook.</li>
+    <li>Добавьте вторую ноду (например, <em>Edit Fields</em>), соедините её с Webhook и убедитесь, что при повторном запуске данные передаются по линии связи (линия должна стать зеленой).</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_0_3: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

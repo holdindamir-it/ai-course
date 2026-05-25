@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 5.1: Подключение OpenAI к n8n: получаем API-ключ, делаем первый запрос</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 5.1. Подключение OpenAI к n8n: получаем API-ключ, делаем первый запрос</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть интеграции OpenAI и n8n</h2>
+<p>OpenAI API предоставляет доступ к вычислительным мощностям языковых моделей через протокол HTTP. n8n выступает в роли клиента, который отправляет структурированный JSON-запрос к серверам OpenAI, получает ответ и передает его дальше по цепочке автоматизации.</p>
+<p>Взаимодействие происходит через <strong>Credential</strong> — токен доступа, который подтверждает подлинность запроса, и ноду <strong>OpenAI</strong>, которая выполняет роль интерфейса для формирования тела запроса (модель, температура, системные инструкции и сам текст пользователя).</p>
+
+<h2>Получение ключа API</h2>
+<ul>
+    <li>Перейдите на платформу <strong>platform.openai.com</strong>.</li>
+    <li>В разделе <strong>API Keys</strong> нажмите кнопку <strong>Create new secret key</strong>.</li>
+    <li>Скопируйте полученную строку и сохраните её локально — повторно она не отобразится.</li>
+</ul>
+
+<h2>Настройка в интерфейсе n8n</h2>
+<h3>Добавление Credentials</h3>
+<ul>
+    <li>В рабочем пространстве n8n откройте левое меню, перейдите в раздел <strong>Credentials</strong>.</li>
+    <li>Нажмите <strong>Add Credential</strong> и выберите в поиске <strong>OpenAI API</strong>.</li>
+    <li>В поле <strong>API Key</strong> вставьте ключ, полученный ранее. Нажмите <strong>Save</strong>.</li>
+</ul>
+
+<h3>Настройка ноды OpenAI</h3>
+<ul>
+    <li>Добавьте ноду <strong>OpenAI</strong> на холст (Canvas) через поиск в правой панели.</li>
+    <li>В поле <strong>Credential for OpenAI API</strong> выберите созданный ранее объект доступа.</li>
+    <li>В поле <strong>Resource</strong> выберите <strong>Chat</strong>.</li>
+    <li>В поле <strong>Operation</strong> выберите <strong>Complete</strong>.</li>
+    <li>В разделе <strong>Options</strong> задайте <strong>Model</strong> (например, <em>gpt-4o</em> или <em>gpt-3.5-turbo</em>).</li>
+    <li>Используйте поле <strong>Messages</strong> для динамической передачи данных:
+        <ul>
+            <li><strong>Role</strong>: укажите <em>system</em> для задания правил поведения модели.</li>
+            <li><strong>Role</strong>: укажите <em>user</em> и в поле <strong>Content</strong> используйте выражение (Expression) для вставки данных из предыдущих нод, например, <code>{{ $json.body.message }}</code>.</li>
+        </ul>
+    </li>
+</ul>
+
+<h2>Пошаговая инструкция: создание первого запроса</h2>
+<ul>
+    <li>Выберите ноду <strong>OpenAI</strong> на холсте. В правой панели настроек убедитесь, что в поле <strong>Resource</strong> выбрано <em>Chat</em>, а в <strong>Operation</strong> — <em>Complete</em>.</li>
+    <li>В блоке <strong>Messages</strong> нажмите кнопку <strong>Add Message</strong>.</li>
+    <li>В первой строке <strong>Role</strong> выберите <em>system</em>, а в <strong>Content</strong> впишите инструкцию: "Ты — технический ассистент".</li>
+    <li>Нажмите <strong>Add Message</strong> еще раз. Во второй строке в <strong>Role</strong> выберите <em>user</em>.</li>
+    <li>Нажмите на иконку <strong>Expression</strong> (шестеренка или значок цепочки) рядом с полем <strong>Content</strong>. В открывшемся редакторе выберите из списка слева ноду <strong>Webhook</strong> и поле, содержащее входящий текст. Нажмите <strong>Save</strong>.</li>
+    <li>Нажмите кнопку <strong>Execute Node</strong> внизу панели настроек, чтобы отправить тестовый запрос к OpenAI.</li>
+</ul>
+
+<h2>Почему это ломается: типичные ошибки</h2>
+<ul>
+    <li><strong>Ошибка 401 Unauthorized:</strong> API-ключ неверный или истек срок его действия. <strong>Решение:</strong> Перейдите в <em>Credentials</em>, выберите свой объект OpenAI и заново вставьте ключ, убедившись, что в начале и конце нет лишних пробелов.</li>
+    <li><strong>Ошибка 429 Too Many Requests:</strong> Исчерпан лимит средств (Credits) на аккаунте OpenAI. <strong>Решение:</strong> Зайдите в личный кабинет <em>platform.openai.com</em>, проверьте раздел <em>Billing</em> и наличие активных средств на балансе.</li>
+    <li><strong>Ошибка "Model not found":</strong> Выбранная модель устарела или недоступна на текущем тарифе. <strong>Решение:</strong> В ноде OpenAI в поле <em>Model</em> вручную введите актуальное название (например, <code>gpt-4o-mini</code>), так как выпадающий список иногда не обновляется после изменения настроек аккаунта.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ul>
+    <li>Создайте цепочку: <strong>Webhook</strong> -> <strong>OpenAI</strong> -> <strong>Respond to Webhook</strong>.</li>
+    <li>В ноде <strong>Respond to Webhook</strong> настройте ответ так, чтобы он возвращал только поле <em>Content</em> из ответа OpenAI (используйте Expression для выбора поля <code>output.content</code>).</li>
+    <li>Запустите тест: отправьте JSON-запрос через любой инструмент (например, Postman или расширение браузера), передав сообщение "Привет, как дела?".</li>
+    <li>Откройте вкладку <strong>Execution Data</strong> в n8n и проверьте, пришел ли корректный JSON от OpenAI и правильно ли он транслируется в финальный ответ.</li>
+    <li>Измените модель в ноде OpenAI на другую (например, <em>gpt-4o-mini</em>) и убедитесь, что структура ответа в логах осталась прежней.</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_5_1: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

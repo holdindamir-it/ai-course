@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 4.6: Галлюцинации и нестабильность ИИ: как их контролировать</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 4.6. Галлюцинации и нестабильность ИИ: как их контролировать</h1>
+    
+    <div class="lesson-content">
+        <h2>Системный промпт как инструмент ограничения галлюцинаций</h2>
+<p>Галлюцинации ИИ — это генерация моделью фактов или структур данных, отсутствующих в контексте запроса. С технической точки зрения, это результат вероятностного характера предсказания следующего токена. Контроль осуществляется через <strong>System Message</strong> (системный промпт) — инструкцию, которая задает жесткие рамки поведения модели до начала обработки пользовательского ввода.</p>
+<p>Системный промпт работает как фильтр: он определяет формат выходных данных (например, строго JSON) и ограничивает область знаний агента, запрещая ему додумывать информацию, если она отсутствует во входных данных. В n8n это первый уровень защиты перед передачей данных в ноду Code.</p>
+
+<h3>Настройка System Message в интерфейсе n8n</h3>
+<ul>
+    <li>Откройте узел <strong>AI Agent</strong> в рабочей области.</li>
+    <li>Найдите секцию <strong>System Message</strong> (обычно располагается в поле <strong>Prompt Type</strong> или <strong>System Prompt</strong>).</li>
+    <li>В поле ввода вставьте текст, определяющий формат ответа: <code>"Ты — анализатор запросов. Возвращай данные строго в формате JSON. Если данных нет, используй значение 'unknown'. Не добавляй пояснений."</code></li>
+    <li>Перейдите в настройки <strong>Output Parser</strong> внутри агента. Выберите <strong>Structured Output Parser</strong>, если модель поддерживает вызов функций (Function Calling).</li>
+    <li>В поле <strong>Schema</strong> (внутри Output Parser) добавьте параметры: <code>intent</code> (тип String) и <code>value</code> (тип Number). Это заставит модель принудительно следовать структуре, что минимизирует риск получения "сырого" текста, который ломает работу следующей ноды <strong>Code</strong>.</li>
+</ul>
+
+<h3>Логическая верификация через режим отладки</h3>
+<ul>
+    <li>Нажмите кнопку <strong>Execute Workflow</strong>.</li>
+    <li>В панели <strong>Output</strong> узла <strong>AI Agent</strong> проверьте вкладку <strong>JSON</strong>. Если поле <code>intent</code> содержит нестандартные символы или пустой объект — системный промпт настроен некорректно.</li>
+    <li>Используйте кнопку <strong>Test Step</strong> для каждой ноды по отдельности, чтобы изолировать этап генерации от этапа парсинга. Если нода <strong>Code</strong> выдает ошибку, значит, системный промпт не ограничил ИИ, и он вывел лишние символы (например, текст "Конечно, цена составляет...").</li>
+    <li>При возникновении ошибки: вернитесь в <strong>AI Agent</strong>, усильте инструкцию в <strong>System Message</strong> фразой <code>"Отвечай только JSON-объектом без дополнительных слов"</code> и повторите тест.</li>
+</ul>
+
+<h3>Пошаговая настройка валидации вывода</h3>
+<ul>
+    <li>Выберите ноду <strong>AI Agent</strong> и перейдите во вкладку <strong>Options</strong>.</li>
+    <li>Активируйте переключатель <strong>Return Trace</strong>, чтобы видеть, какие именно этапы рассуждения проходит модель перед отправкой данных в <strong>Code</strong>.</li>
+    <li>В поле <strong>Prompt Parameters</strong> (если используется модель через LangChain) установите <strong>Temperature</strong> в значение <code>0</code>. Это минимизирует творческую составляющую модели и стабилизирует формат вывода.</li>
+    <li>В ноде <strong>Code</strong> переключите режим языка с <strong>JavaScript</strong> на <strong>JSON</strong>, если вам нужно просто отфильтровать поля, либо оставьте <strong>JavaScript</strong> и используйте метод <code>item.json.intent || "unknown"</code> для обработки пустот.</li>
+    <li>Нажмите кнопку <strong>Save Workflow</strong>, чтобы зафиксировать состояние всех параметров узлов.</li>
+</ul>
+
+<h3>Типичные технические сбои и методы исправления</h3>
+<ul>
+    <li><strong>Сбой 1: Модель добавляет "Markdown-обертку" (три обратные кавычки ```json).</strong> 
+    Решение: В системном промпте добавьте инструкцию <code>"Do not use markdown formatting"</code>. В ноде <strong>Code</strong> используйте метод <code>.replace(/```json|```/g, '')</code> при получении строки, чтобы очистить данные перед парсингом.</li>
+    <li><strong>Сбой 2: ИИ возвращает массив вместо объекта.</strong> 
+    Решение: В настройках <strong>AI Agent</strong> проверьте, чтобы <strong>Output Parser</strong> был настроен на получение одного объекта. Если ошибка сохраняется, в ноде <strong>Code</strong> явно укажите <code>return [items[0].json];</code>, чтобы принудительно выбрать первый элемент массива.</li>
+    <li><strong>Сбой 3: Превышение лимита токенов в ответе.</strong> 
+    Решение: В поле <strong>Max Tokens</strong> ноды <strong>AI Agent</strong> установите значение <code>50-100</code>. Это вынудит модель быть лаконичной и снизит вероятность "рассуждений" на посторонние темы.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+<ul>
+    <li>Добавьте в цепочку ноду <strong>If</strong> сразу после <strong>AI Agent</strong>.</li>
+    <li>Настройте условие в <strong>If</strong>: если поле <code>intent</code> равно <code>unknown</code>, направьте поток в ноду <strong>Set</strong>, которая проставит статус "Требует ручной проверки".</li>
+    <li>Добавьте запрос "Расскажи сказку" в <strong>Webhook</strong>.</li>
+    <li>Убедитесь в режиме <strong>Execution Data</strong>, что ИИ отправил запрос в ветку <strong>If</strong>, а не в Google Sheets, из-за того, что намерение не было распознано.</li>
+    <li>Измените системный промпт так, чтобы при получении непонятного запроса модель возвращала <code>intent: "manual_check"</code>, и проверьте, как изменится путь данных в редакторе.</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_4_6: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

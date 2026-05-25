@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 1.1: Интерфейс n8n: что где находится и зачем</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 1.1. Интерфейс n8n: что где находится и зачем</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть n8n: визуальная оркестрация данных</h2>
+<p>n8n — это система визуального программирования, работающая по принципу потоков данных (data flow). Каждый процесс представляет собой цепочку узлов (нод), где выходные данные предыдущей ноды становятся входными данными для следующей. Взаимодействие происходит через передачу объектов в формате JSON между элементами рабочего процесса.</p>
+<p>Инструмент работает асинхронно: каждая нода выполняет конкретную операцию над данными (преобразование, фильтрацию или отправку запроса), а визуальный редактор позволяет отслеживать состояние объекта на каждом этапе обработки.</p>
+
+<h2>Разбор интерфейса и логика работы</h2>
+<ul>
+    <li><strong>Canvas (Холст):</strong> Рабочая область, где размещаются ноды. Перемещение между нодами осуществляется перетаскиванием соединительных линий.</li>
+    <li><strong>Node Library (Меню нод):</strong> Панель справа, содержащая список всех доступных функций. Используется для поиска нужного действия (например, "Webhook" или "HTTP Request") и перетаскивания его на холст.</li>
+    <li><strong>Node Configuration (Окно настройки ноды):</strong> Открывается двойным кликом по ноде. Содержит параметры для конкретного действия. 
+        <ul>
+            <li><strong>Parameters:</strong> Основные настройки (URL для запроса, методы, параметры полей).</li>
+            <li><strong>Expression Editor (Редактор выражений):</strong> Иконка шестеренки или "Expression" внутри полей ввода. Позволяет использовать переменные из предыдущих нод и функции (например, <em>now()</em>) для динамического изменения данных.</li>
+        </ul>
+    </li>
+    <li><strong>Input/Output Preview (Окно предпросмотра):</strong> Нижняя часть окна настройки ноды. Отображает JSON-структуру, полученную от предыдущего шага, или результат выполнения текущей ноды.</li>
+    <li><strong>Execute Node (Кнопка запуска):</strong> Расположена внизу панели настроек. Принудительно запускает текущую ноду для тестирования. После выполнения данные в окне предпросмотра обновляются.</li>
+    <li><strong>Workflow Controls (Верхняя панель):</strong> 
+        <ul>
+            <li><strong>Execute Workflow:</strong> Кнопка запуска всего сценария целиком.</li>
+            <li><strong>Save:</strong> Сохранение текущего состояния рабочего процесса.</li>
+        </ul>
+    </li>
+</ul>
+
+<h2>Пошаговая настройка цепочки</h2>
+<p>Для создания первого рабочего сценария выполните следующие действия:</p>
+<ul>
+    <li><strong>Размещение:</strong> Откройте <em>Nodes Panel</em> справа, введите в поиске <em>Webhook</em>, перетащите ноду на холст. Повторите для <em>Edit Fields</em> и <em>HTTP Request</em>.</li>
+    <li><strong>Соединение:</strong> Наведите курсор на серый круг справа от ноды <em>Webhook</em>, зажмите левую кнопку мыши и протяните линию к левому кругу ноды <em>Edit Fields</em>. Повторите действие для соединения <em>Edit Fields</em> с <em>HTTP Request</em>.</li>
+    <li><strong>Настройка Edit Fields:</strong> Откройте ноду двойным кликом. Нажмите <em>Add Field</em> -> <em>String</em>. В поле <em>Name</em> введите <em>timestamp</em>. Нажмите кнопку с иконкой шестеренки напротив поля <em>Value</em>, выберите <em>Add Expression</em>. В окне редактора найдите вкладку <em>Date & Time</em>, выберите функцию <em>now()</em>. Нажмите <em>Save</em>.</li>
+    <li><strong>Настройка HTTP Request:</strong> Укажите URL (например, <em>https://webhook.site</em>). В параметре <em>Send Body</em> выберите <em>JSON</em>. Нажмите <em>Add Field</em> -> <em>Add Key/Value</em>, введите ключ <em>data</em>, а в значении выберите <em>Expression</em> и через редактор укажите путь к полю <em>timestamp</em> из предыдущей ноды.</li>
+</ul>
+
+<h2>Типичные ошибки и методы их устранения</h2>
+<ul>
+    <li><strong>Отсутствие данных в следующей ноде:</strong> Если нода не видит данные, значит, предыдущая нода не была выполнена. <strong>Решение:</strong> Нажмите <em>Execute Node</em> на каждой ноде по очереди, пока соединительные линии не станут зелеными.</li>
+    <li><strong>Неверная структура JSON (Path Error):</strong> Ошибка возникает при попытке обратиться к несуществующему пути в <em>Expression Editor</em>. <strong>Решение:</strong> В окне предпросмотра ноды раскройте объект <em>json</em>. Если нужное поле находится внутри вложенного объекта (например, <em>body</em>), путь должен быть прописан строго через точку: <em>$json.body.timestamp</em>.</li>
+    <li><strong>Невалидный URL или метод:</strong> Нода <em>HTTP Request</em> выдает ошибку 404 или Connection Refused. <strong>Решение:</strong> Проверьте параметры <em>Method</em> (GET/POST) и наличие протокола <em>https://</em> в поле URL. Убедитесь, что нода переведена в режим <em>Manual execution</em> при тестировании.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ol>
+    <li>Удалите ноду <em>Edit Fields</em> и создайте цепочку заново, добавив <em>Set Node</em>.</li>
+    <li>В <em>Set Node</em> настройте добавление двух новых полей: <em>user_id</em> со значением <em>123</em> и <em>status</em> со значением <em>active</em>.</li>
+    <li>Используя редактор выражений, передайте значение <em>status</em> из <em>Set Node</em> в заголовок (Header) или тело (Body) ноды <em>HTTP Request</em>.</li>
+    <li>После выполнения <em>Execute Node</em> откройте вкладку <em>Output</em> в последней ноде и убедитесь, что в итоговом объекте JSON присутствуют оба добавленных поля.</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_1_1: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

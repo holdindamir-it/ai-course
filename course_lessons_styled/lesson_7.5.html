@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 7.5: Экспорт workflow и техническая документация проекта</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 7.5. Экспорт workflow и техническая документация проекта</h1>
+    
+    <div class="lesson-content">
+        <h2>Экспорт Workflow: архитектурная целостность</h2>
+<p>Экспорт workflow в n8n — это процесс преобразования визуальной схемы автоматизации в текстовый формат JSON (JavaScript Object Notation). Этот файл содержит полное описание структуры нод, их параметров, секретных ключей (в зашифрованном виде) и связей между ними. Файл экспорта является единственным достоверным техническим документом проекта, позволяющим перенести логику на другой экземпляр n8n или восстановить состояние системы после сбоя.</p>
+
+<h2>Техническая документация: стандарт описания</h2>
+<p>Техническая документация автоматизации — это фиксация входных и выходных данных для каждой ноды. Она необходима для отладки, так как позволяет сравнить ожидаемую структуру объекта (JSON-схему) с фактической, которую система получает на каждом шаге. Без документирования структуры данных процесс становится "черным ящиком", в котором невозможно выявить причину ошибки.</p>
+
+<h3>Интерфейсные элементы и логика работы</h3>
+<ul>
+    <li><strong>Меню экспорта (Download):</strong> Находится в правом верхнем углу редактора Workflow (три точки — Options). При выборе "Download Workflow" браузер инициирует загрузку файла с расширением .json.</li>
+    <li><strong>Вкладка JSON в редакторе:</strong> Внутри каждой ноды существует переключатель "JSON". Он позволяет увидеть "сырые" данные, которыми оперирует нода. При документировании вы копируете содержимое этой вкладки для создания эталонного образца данных.</li>
+    <li><strong>Версионирование (Snapshots):</strong> В панели управления workflow доступна функция "Workflow History". Она фиксирует изменения параметров. Технически это база данных состояний, которая позволяет откатиться к предыдущему рабочему JSON-коду в случае деструктивных изменений.</li>
+    <li><strong>Поле "Notes" (Sticky Note):</strong> Специальная нода в интерфейсе, которая не выполняет логических действий, но является обязательным элементом документации. В ней фиксируются: API-методы (POST/GET), URL-адреса эндпоинтов, ожидаемые заголовки (Headers) и формат ответа (JSON/XML).</li>
+</ul>
+
+<h3>Критическая логика импорта</h3>
+<p>При импорте JSON-файла через кнопку "Import from file", n8n проводит парсинг структуры. Если в импортируемом файле присутствуют ссылки на отсутствующие учетные данные (Credentials), ноды будут помечены красным индикатором ошибки. Это означает, что для завершения импорта необходимо заново привязать валидные токены к соответствующим полям внутри каждой ноды в интерфейсе Credentials.</p>
+
+<h2>Пошаговая инструкция: Экспорт и документирование</h2>
+<ul>
+    <li><strong>Экспорт структуры:</strong> Откройте созданный workflow. В правом верхнем углу нажмите на иконку <strong>три точки (Options)</strong>. Выберите пункт <strong>Download</strong>. Сохраните полученный файл на локальный диск — это ваш бэкап логики.</li>
+    <li><strong>Создание документации:</strong> В левой панели инструментов (Nodes) найдите иконку <strong>Sticky Note</strong> (стикер). Перетащите её на рабочее поле. В поле ввода текста укажите: "Цель: пересылка данных из Webhook в Google Sheets. Метод: POST. Параметры: email, name".</li>
+    <li><strong>Архивация данных:</strong> Скопируйте JSON-структуру последней ноды (вкладка <strong>JSON</strong>), откройте текстовый редактор, вставьте код и сохраните его как <strong>log_structure.txt</strong>.</li>
+</ul>
+
+<h2>Причины сбоев и методы исправления</h2>
+<ul>
+    <li><strong>Несоответствие типов данных (Type Mismatch):</strong> Вы экспортировали workflow, где нода ожидает число (Number), а при импорте передается строка (String). <strong>Исправление:</strong> Зайдите в настройки ноды, переключите тип поля (Expression/Fixed) или используйте ноду <strong>Edit Fields</strong> для приведения данных к нужному формату.</li>
+    <li><strong>Потеря контекста Credentials:</strong> При переносе workflow на другой аккаунт (или после удаления учетных данных) нода не видит ключ доступа. <strong>Исправление:</strong> В выпадающем меню <strong>Credential</strong> внутри ноды выберите <strong>Create New</strong> и повторно введите API-ключ или авторизационные данные.</li>
+    <li><strong>Битые ссылки (Broken References):</strong> После удаления ноды-источника, последующие ноды теряют связь с данными (поле "Input Data" пустое). <strong>Исправление:</strong> Пересоберите цепочку нод, удалив поврежденный элемент и перетащив соединительную линию (Input/Output port) от источника к целевой ноде.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ul>
+    <li>Экспортируйте текущий рабочий Workflow в формате .json.</li>
+    <li>Удалите текущий Workflow из списка (Delete) и импортируйте его обратно через кнопку <strong>Import from file</strong>.</li>
+    <li>Если после импорта ноды подсвечены красным, откройте их, выберите существующие <strong>Credentials</strong> и нажмите кнопку <strong>Test Step</strong> для проверки связи.</li>
+    <li>Добавьте на рабочее поле <strong>Sticky Note</strong> и кратко опишите, что делает каждая нода в вашей цепочке.</li>
+    <li>Сделайте скриншот рабочего поля с видимым стикером и всеми настроенными нодами, где отсутствуют индикаторы ошибок.</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_7_5: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

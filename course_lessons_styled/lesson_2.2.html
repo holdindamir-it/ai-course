@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 2.2: Google Sheets: читаем, пишем, обновляем строки автоматически</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 2.2. Google Sheets: читаем, пишем, обновляем строки автоматически</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть работы Google Sheets как базы данных</h2>
+<p>Google Sheets в автоматизации используется как хранилище данных (база данных плоского типа). Каждая строка в таблице воспринимается системой как отдельный объект (JSON-объект), где заголовки столбцов становятся ключами, а ячейки — значениями.</p>
+<p>Процесс работы строится на HTTP-запросах к API Google. Нода n8n преобразует действия пользователя в эти запросы, позволяя считывать диапазоны ячеек, добавлять новые записи в конец листа или изменять существующие данные по определенному условию (фильтру).</p>
+
+<h3>Основные операции и логика управления</h3>
+<p>Для взаимодействия с данными используются следующие поля внутри ноды Google Sheets:</p>
+<ul>
+    <li><strong>Resource:</strong> определяет объект манипуляции. Выбираем <code>Row</code> для работы с записями или <code>Spreadsheet</code> для управления метаданными файла.</li>
+    <li><strong>Operation:</strong> выбор действия. 
+        <ul>
+            <li><code>Append</code> — добавляет новую строку в самый низ таблицы.</li>
+            <li><code>Update</code> — изменяет данные в конкретной строке (требует указания номера строки или уникального ключа).</li>
+            <li><code>Get Many</code> — считывает массив данных из указанного диапазона (например, A1:D100).</li>
+        </ul>
+    </li>
+    <li><strong>Sheet Name:</strong> точное название вкладки в нижней части вашего документа Google Sheets. Оно должно совпадать до символа, включая пробелы.</li>
+    <li><strong>Options / Column To Match On:</strong> критический параметр для обновления данных. Позволяет системе найти строку, которую нужно изменить, основываясь на совпадении данных (например, искать строку, где столбец "Email" равен значению из предыдущей ноды).</li>
+    <li><strong>Value to Match:</strong> значение, по которому система ищет строку в таблице.</li>
+    <li><strong>Columns:</strong> блок полей для сопоставления данных из автоматизации с заголовками столбцов в таблице (Mapping). В левое поле вписывается имя заголовка из таблицы, в правое — передаваемое значение из предыдущих нод.</li>
+</ul>
+
+<h3>Алгоритм настройки записи данных</h3>
+<ul>
+    <li>Добавьте ноду <strong>Google Sheets</strong> и выберите операцию <code>Append</code>.</li>
+    <li>Укажите <code>Sheet Name</code>, соответствующее вашей вкладке.</li>
+    <li>Нажмите кнопку <strong>Add Field</strong> в разделе <strong>Columns</strong>.</li>
+    <li>Введите точное название заголовка вашего столбца в поле <strong>Column Name</strong>.</li>
+    <li>В поле <strong>Value</strong> с помощью кнопки с иконкой шестеренки выберите <code>Add Expression</code> для динамической подстановки данных из предыдущих шагов процесса.</li>
+    <li>Нажмите <strong>Execute Node</strong> для отправки тестовой записи в таблицу.</li>
+</ul>
+
+<h3>Пошаговая настройка обновления существующей строки</h3>
+<ul>
+    <li>Добавьте на холст новую ноду <strong>Google Sheets</strong> и соедините её с предыдущим этапом, откуда приходят обновленные данные.</li>
+    <li>В поле <strong>Resource</strong> выберите <code>Row</code>, в поле <strong>Operation</strong> выберите <code>Update</code>.</li>
+    <li>В поле <strong>Lookup Column</strong> введите название столбца, в котором находится уникальный идентификатор (например, <code>ID</code> или <code>Email</code>).</li>
+    <li>В поле <strong>Lookup Value</strong> кликните на иконку шестеренки -> <code>Add Expression</code>. В открывшемся окне перетащите переменную из левой панели (Input), которая содержит значение для поиска.</li>
+    <li>В блоке <strong>Update Key</strong> нажмите кнопку <strong>Add Field</strong>, выберите название столбца, который нужно обновить, и введите новое значение или также выберите его через <code>Expression</code>.</li>
+    <li>Нажмите <strong>Execute Node</strong>. Если в таблице найдена строка с соответствующим <code>Lookup Value</code>, данные будут перезаписаны.</li>
+</ul>
+
+<h3>Технические причины сбоев и способы устранения</h3>
+<ul>
+    <li><strong>Ошибка "Sheet name does not exist":</strong> Возникает из-за несоответствия имени вкладки в настройках ноды и внизу интерфейса Google Sheets. Решение: скопируйте имя вкладки прямо из интерфейса Google Sheets (Ctrl+C) и вставьте его в поле <strong>Sheet Name</strong> в n8n, убедившись в отсутствии лишних пробелов.</li>
+    <li><strong>Ошибка "Column not found":</strong> Возникает, если в настройках ноды указано название столбца (Column Name), которого нет в первой строке вашей таблицы. Решение: проверьте первую строку Google Sheets. Она должна содержать заголовки, идентичные тем, что указаны в ноде. Убедитесь, что вы не используете объединенные ячейки в заголовках.</li>
+    <li><strong>Ошибка "403 Permission Denied":</strong> Возникает при попытке записать данные в таблицу, к которой у сервисного аккаунта или OAuth-пользователя нет прав на редактирование. Решение: откройте таблицу в Google, нажмите кнопку <strong>Поделиться</strong> и выдайте права <strong>Редактор</strong> тому email-адресу, который используется в ваших Credentials (обычно это email сервисного аккаунта или ваш личный аккаунт).</li>
+</ul>
+
+<h3>Практическое задание для закрепления</h3>
+<p>Выполните следующие действия в своем сценарии:</p>
+<ol>
+    <li>Создайте в таблице два столбца: <code>Name</code> и <code>Status</code>.</li>
+    <li>Добавьте одну строку с данными: <code>Ivan</code> в колонку <code>Name</code> и <code>Pending</code> в колонку <code>Status</code>.</li>
+    <li>Настройте ноду <strong>Google Sheets</strong> с операцией <code>Update</code> так, чтобы при запуске сценария статус <code>Ivan</code> менялся с <code>Pending</code> на <code>Done</code>.</li>
+    <li>Используйте <code>Lookup Column: Name</code> и <code>Lookup Value: Ivan</code>.</li>
+    <li>Проверьте изменение значения в интерфейсе Google Sheets после нажатия <strong>Execute Node</strong>.</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) return;
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            // Записываем прогресс по уникальному ID урока (например, lesson_1_1)
+            await setDoc(docRef, { lesson_2_2: true }, { merge: true });
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            alert("Ошибка сохранения прогресса: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>
