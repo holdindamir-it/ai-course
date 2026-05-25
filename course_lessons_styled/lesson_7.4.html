@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 7.4: Мониторинг и восстановление: что делать, если бот завис</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 7.4. Мониторинг и восстановление: что делать, если бот завис</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть инструмента: Мониторинг состояний</h2>
+<p>Мониторинг в n8n — это система отслеживания жизненного цикла выполнения каждого процесса (Workflow). Когда ваш бот получает внешний запрос, n8n создает запись в базе данных, называемую Execution (выполнение). Эта запись содержит входные данные, промежуточные результаты обработки каждой нодой и итоговый статус: Success (успешно), Error (ошибка) или Waiting (ожидание).</p>
+<p>Если бот «завис», мониторинг позволяет увидеть, на какой конкретно ноде остановился процесс. Статус выполнения показывает, завершился ли сценарий корректно или система прервала его из-за тайм-аута, нехватки ресурсов на сервере или синтаксической ошибки в данных.</p>
+
+<h2>Интерфейс и логика отладки</h2>
+<ul>
+    <li><strong>Вкладка Executions:</strong> Основная панель управления в левом боковом меню n8n. Она разделена на две части: список всех запусков и область детального просмотра конкретного события.</li>
+    <li><strong>Индикатор статуса:</strong> Зеленая точка означает успешное прохождение всех нод. Красная — критическую ошибку. Желтая или «часики» означают, что процесс все еще выполняется или «завис» в ожидании ответа от внешней системы.</li>
+    <li><strong>Панель детального анализа (Node View):</strong> При клике на конкретное выполнение открывается визуальная схема вашего Workflow. Ноды, которые были успешно пройдены, подсвечиваются цветом. Клик по любой ноде открывает окно <strong>Input/Output</strong>, где хранятся сырые данные, полученные ботом на данном этапе.</li>
+    <li><strong>Кнопка Rerun:</strong> Позволяет повторно запустить Workflow с теми же входными данными. Это критически важно для отладки: если бот завис, вы можете исправить настройки ноды и нажать Rerun, не отправляя повторный запрос извне.</li>
+    <li><strong>Раздел JSON:</strong> Вкладка внутри ноды, отображающая структуру данных. Если в поле Output пусто или отображается ошибка, значит, бот перестал получать или обрабатывать информацию именно на этом этапе.</li>
+</ul>
+
+<h2>Пошаговая инструкция по диагностике</h2>
+<ul>
+    <li>В интерфейсе n8n перейдите в левое меню и нажмите на иконку <strong>Executions</strong> (значок часов).</li>
+    <li>В списке выберите последнюю запись, помеченную красным или желтым статусом.</li>
+    <li>Нажмите на строку выполнения: откроется карта вашего Workflow.</li>
+    <li>Найдите ноду, которая подсвечена красным контуром. Кликните по ней.</li>
+    <li>В открывшемся окне переключитесь на вкладку <strong>Error</strong> — там будет текстовое описание причины, почему процесс не завершился.</li>
+    <li>Если данных нет, переключитесь на вкладку <strong>Output</strong>. Если поле пустое, значит, нода не получила данные от предыдущего узла.</li>
+</ul>
+
+<h2>Типичные причины сбоев и способы их устранения</h2>
+<ul>
+    <li><strong>Тайм-аут (Timeout):</strong> Внешний сервис долго отвечает или сервер Railway перешел в режим сна. <strong>Решение:</strong> В настройках ноды (HTTP Request) найдите поле <strong>Timeout</strong> и увеличьте значение (например, с 10 до 60 секунд) или убедитесь, что сервис-источник работает в режиме «Always On».</li>
+    <li><strong>Неверная структура данных (Data Mismatch):</strong> Вы ожидаете JSON, но получаете HTML-ошибку от сервера. <strong>Решение:</strong> Проверьте вкладку <strong>Input</strong> в ноде, которая выдает ошибку. Сравните ключи в JSON с тем, что реально пришло от сервиса. Отредактируйте ноду, чтобы она корректно считывала актуальные поля.</li>
+    <li><strong>Отсутствие прав доступа (Authentication Error):</strong> Токен авторизации истек. <strong>Решение:</strong> Перейдите во вкладку <strong>Credentials</strong> в настройках ноды, удалите старый профиль и создайте новый, повторно вставив актуальный API-ключ.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ul>
+    <li>Спровоцируйте ошибку: в настройках ноды <strong>Webhook</strong> измените метод с <strong>POST</strong> на <strong>GET</strong>, сохраните Workflow.</li>
+    <li>Попробуйте отправить <strong>POST</strong>-запрос на этот же адрес.</li>
+    <li>Зайдите в раздел <strong>Executions</strong>, найдите проваленный запуск и изучите ошибку во вкладке <strong>Error</strong>.</li>
+    <li>Исправьте метод обратно на <strong>POST</strong>, нажмите кнопку <strong>Rerun</strong> в интерфейсе Execution, чтобы убедиться, что процесс завершился со статусом <strong>Success</strong>.</li>
+    <li>Сделайте скриншот, где видна панель с историей запусков и статус последнего успешного выполнения (зеленая точка).</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_7_4"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

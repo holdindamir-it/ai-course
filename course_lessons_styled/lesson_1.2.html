@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 1.2: Первый workflow: автоматическая отправка письма по расписанию</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 1.2. Первый workflow: автоматическая отправка письма по расписанию</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть инструмента: n8n и событийная логика</h2>
+<p>n8n — это система визуального проектирования логических цепочек (workflow), работающая по принципу передачи потоков данных между нодами. Каждая нода — это отдельный функциональный блок, выполняющий одну конкретную операцию: запрос к API, трансформацию данных или задержку по времени. Данные передаются между нодами в формате JSON (JavaScript Object Notation), где каждый ключ и значение структурированы для машинного чтения.</p>
+<p>Автоматизация по расписанию строится на событийной модели: стартовая нода выступает триггером, который генерирует "событие" в заданный момент времени. После срабатывания триггера управление передается по соединительной линии к следующей ноде в цепочке, которая обрабатывает полученный от предыдущего блока контекст.</p>
+
+<h2>Разбор интерфейса и логики</h2>
+<ul>
+    <li><strong>Интерфейс Canvas:</strong> Рабочее поле, где размещаются ноды. Соединение между ними создается путем перетаскивания вывода (круглая точка на правой стороне ноды) ко входу (точка на левой стороне) следующей ноды.</li>
+    <li><strong>Нода "Schedule Trigger":</strong> Используется для настройки периодичности выполнения. 
+        <ul>
+            <li>Поле <em>Trigger Interval</em>: определяет частоту запуска (минуты, часы, дни).</li>
+            <li>Поле <em>Start Time</em>: устанавливает время первого запуска процесса.</li>
+        </ul>
+    </li>
+    <li><strong>Нода "Gmail" (или "SMTP"):</strong> Отвечает за отправку сообщений. 
+        <ul>
+            <li>Поле <em>Resource</em>: выбирается действие (в данном случае — "Message").</li>
+            <li>Поле <em>Operation</em>: выбирается функция (в данном случае — "Send").</li>
+            <li>Поле <em>To</em>: адрес получателя.</li>
+            <li>Поле <em>Subject</em>: тема письма.</li>
+            <li>Поле <em>Text Content</em>: тело письма, куда через <strong>Expression Editor</strong> (кнопка "Add Expression") можно подтянуть данные из предыдущих нод.</li>
+        </ul>
+    </li>
+    <li><strong>Панель настроек ноды:</strong> Открывается кликом по блоку. Вкладка <em>Parameters</em> содержит обязательные поля для заполнения. Вкладка <em>Output</em> доступна после нажатия кнопки <em>Execute Node</em> и отображает результат обработки данных конкретным блоком.</li>
+    <li><strong>Редактор выражений (Expression Editor):</strong> Вызывается через пиктограмму шестеренки или нажатие кнопки "Expression" в полях ввода. Позволяет обращаться к данным из любой предыдущей ноды через синтаксис <em>{{ $json.имя_ключа }}</em>.</li>
+</ul>
+
+<h2>Пошаговая настройка отправки письма</h2>
+<ul>
+    <li>В панели <strong>Nodes</strong> введите в поиске <em>Schedule</em> и перетащите ноду <em>Schedule Trigger</em> на холст. Установите интервал <em>Every 1 Day</em>.</li>
+    <li>Добавьте ноду <em>Gmail</em> (или <em>SMTP</em>), соедините её с триггером, перетащив линию от точки выхода <em>Schedule</em> к точке входа <em>Gmail</em>.</li>
+    <li>В настройках ноды <em>Gmail</em> нажмите <em>Credential</em> -> <em>Create New Credential</em>, введите данные авторизации почтового сервиса и нажмите <em>Save</em>.</li>
+    <li>В поле <em>To</em> введите адрес получателя. В поле <em>Subject</em> введите: "Ежедневный отчет".</li>
+    <li>В поле <em>Body</em> нажмите кнопку <em>Add Expression</em>. В открывшемся окне слева в списке <em>Nodes</em> выберите <em>Schedule Trigger</em>, кликните на объект <em>Output Data</em>, чтобы система автоматически сформировала выражение <em>{{ $json.timestamp }}</em>.</li>
+    <li>Нажмите <em>Execute Node</em>, чтобы отправить тестовое письмо и проверить корректность авторизации.</li>
+</ul>
+
+<h2>Типичные ошибки и их устранение</h2>
+<ul>
+    <li><strong>Ошибка аутентификации:</strong> Приложение выдает "401 Unauthorized" или "Invalid Credentials". <strong>Решение:</strong> Проверьте корректность OAuth2 токена или пароля приложения в настройках <em>Credential</em>. Если это Gmail, убедитесь, что в Google Cloud Console включен API Gmail.</li>
+    <li><strong>Отсутствие данных в выражении:</strong> Выражение <em>{{ $json.key }}</em> возвращает <em>undefined</em>. <strong>Решение:</strong> Убедитесь, что предыдущая нода была выполнена (горит зеленая галочка) и данные физически переданы в поток. Если нода не была запущена, последующий блок не увидит входящий JSON.</li>
+    <li><strong>Тайм-аут соединения:</strong> <strong>Решение:</strong> Проверьте соединение с интернетом и отсутствие фаерволов в вашей сети, блокирующих исходящие запросы к SMTP-серверам или API внешних сервисов.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ol>
+    <li>Создайте цепочку из трех нод: <em>Schedule Trigger</em> -> <em>Set Node</em> -> <em>Gmail</em>.</li>
+    <li>В <em>Set Node</em> создайте новое поле: <em>message_body</em> со значением "Автоматическое уведомление выполнено успешно".</li>
+    <li>В настройках <em>Gmail</em> в поле <em>Body</em> используйте <em>Expression Editor</em>, чтобы подтянуть значение из поля <em>message_body</em>, созданного в <em>Set Node</em>.</li>
+    <li>Запустите цепочку кнопкой <em>Execute Workflow</em> и проверьте входящее письмо на наличие текста, заданного в <em>Set Node</em>.</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_1_2"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

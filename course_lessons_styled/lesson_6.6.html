@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 6.6: Проект: полная воронка (сайт -> GPT-квалификация -> CRM -> уведомление)</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 6.6. Проект: полная воронка (сайт -> GPT-квалификация -> CRM -> уведомление)</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть связки: Веб-форма и передача данных</h2>
+<p>Воронка автоматизации начинается с точки сбора данных. Webhook — это технический эндпоинт, который n8n предоставляет для приема входящих HTTP-запросов. Когда пользователь заполняет форму на вашем сайте, данные (имя, телефон, запрос) отправляются по протоколу POST на URL-адрес вашего вебхука. n8n перехватывает этот пакет, преобразует его в JSON-объект и делает доступным для дальнейшей обработки всеми последующими нодами в сценарии.</p>
+<p>GPT-квалификация — это следующий этап, где полученные данные передаются через API-запрос к модели OpenAI. Нода HTTP Request отправляет JSON-объект с данными пользователя в систему OpenAI, которая анализирует текст по заданному системному промпту и возвращает структурированный ответ: статус квалификации («лид» или «спам») и резюме интереса клиента.</p>
+
+<h2>Разбор интерфейса и логика настройки</h2>
+<h3>1. Нода Webhook</h3>
+<ul>
+    <li><strong>HTTP Method:</strong> Выберите POST. Это стандарт для отправки данных из форм.</li>
+    <li><strong>Path:</strong> Укажите уникальный идентификатор (например, <code>lead-capture</code>), который станет частью URL вашего вебхука.</li>
+    <li><strong>Authentication:</strong> Установите в режим None, если форма находится на внешнем сайте.</li>
+    <li><strong>Respond:</strong> Выберите «Immediate», чтобы сайт не «зависал» в ожидании ответа от сервера, пока идет анализ GPT.</li>
+</ul>
+
+<h3>2. Нода HTTP Request (Интеграция с GPT)</h3>
+<ul>
+    <li><strong>URL:</strong> <code>https://api.openai.com/v1/chat/completions</code>.</li>
+    <li><strong>Method:</strong> POST.</li>
+    <li><strong>Authentication:</strong> Выберите «Header Auth» (или создайте Credential с названием OpenAI API), добавьте заголовок <code>Authorization</code> со значением <code>Bearer [ваш_API_ключ]</code>.</li>
+    <li><strong>Send Body:</strong> Включите опцию «Send Body».</li>
+    <li><strong>Body Parameters:</strong> В поле JSON вставьте структуру: <code>{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Проанализируй данные клиента: {{ $json.body.user_message }}"}]}</code>.</li>
+</ul>
+
+<h3>3. Логика работы с данными (Data Flow)</h3>
+<ul>
+    <li><strong>Переменные:</strong> Используйте окно «Expression» для доступа к данным. Для обращения к данным из вебхука в последующих нодах используйте синтаксис <code>{{ $json.body.имя_поля }}</code>.</li>
+    <li><strong>Тестирование:</strong> После настройки ноды Webhook перейдите в режим «Listen for Test Event» и отправьте данные через Postman или реальную форму на сайте. Данные отобразятся в нижней части ноды в виде древовидной структуры JSON.</li>
+    <li><strong>Mapping:</strong> Чтобы передать результат квалификации из GPT в CRM (например, Airtable или Google Sheets), используйте ноду соответствующего сервиса, где в полях ввода через селектор Expression выберите выходящий объект от ноды HTTP Request.</li>
+</ul>
+
+<h2>Пошаговая инструкция настройки</h2>
+<ul>
+    <li><strong>Создание CRM-записи:</strong> Добавьте ноду целевой CRM (например, Google Sheets). В поле <strong>Operation</strong> выберите «Append». В поле <strong>Sheet Name</strong> укажите имя листа. В разделе <strong>Columns</strong> нажмите «Add Column» для каждого поля (Имя, Статус, Резюме). В поле значения нажмите иконку шестеренки, выберите <strong>Add Expression</strong>, в открывшемся окне найдите результат ноды HTTP Request и перетащите нужное поле (например, выборку из <code>choices[0].message.content</code>) в строку выражения.</li>
+    <li><strong>Уведомление в Telegram:</strong> Добавьте ноду Telegram. В поле <strong>Chat ID</strong> вставьте ID вашего чата. В поле <strong>Text</strong> составьте сообщение с помощью визуального редактора, вставляя переменные из предыдущих нод через перетаскивание (Drag-and-drop) из списка слева в интерфейсе n8n.</li>
+    <li><strong>Активация:</strong> Соедините ноды линиями (Nodes connector). Убедитесь, что все ноды подсвечены активным цветом. Нажмите кнопку <strong>Execute Workflow</strong> для ручной проверки или кнопку <strong>Activate</strong> в верхнем правом углу для перевода сценария в режим постоянной работы.</li>
+</ul>
+
+<h2>Почему это ломается: типичные ошибки</h2>
+<ul>
+    <li><strong>Ошибка 401 Unauthorized в HTTP Request:</strong> Происходит, если ключ OpenAI API введен неверно или отсутствует в Credential. <strong>Решение:</strong> Перейдите в настройки Credentials ноды, удалите старую запись и создайте новую, скопировав API Key напрямую из панели управления OpenAI без пробелов.</li>
+    <li><strong>Ошибка пустых полей в CRM:</strong> Возникает, если структура JSON, пришедшая от GPT, не совпадает с тем, что вы указали в Expression. <strong>Решение:</strong> Откройте вкладку <strong>Input</strong> в ноде CRM, найдите путь к данным в дереве JSON и обновите выражение в ноде, перетащив ключ заново.</li>
+    <li><strong>Тайм-аут (Timeout):</strong> Возникает, если GPT долго отвечает или связь между серверами нестабильна. <strong>Решение:</strong> Увеличьте значение <strong>Timeout</strong> в настройках ноды HTTP Request (поле «Options») до 60 секунд.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ul>
+    <li>Настройте цепочку <strong>Webhook -> HTTP Request (GPT) -> Google Sheets -> Telegram</strong>.</li>
+    <li>В системном промпте ноды GPT укажите жесткое условие: «Отвечай строго в формате JSON: {"status": "ok", "summary": "..."}».</li>
+    <li>В ноде Google Sheets настройте автоматическое создание строки только в том случае, если поле <code>status</code> равно «ok» (используйте кнопку <strong>Add Condition</strong> в настройках ноды).</li>
+    <li>Отправьте тестовый запрос через Postman, откройте вкладку <strong>Execution</strong> и сделайте скриншот успешного прохождения данных через все 4 ноды.</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_6_6"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 4.4: Системные промпты: создаём «персонажа» для корпоративного бота</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 4.4. Системные промпты: создаём «персонажа» для корпоративного бота</h1>
+    
+    <div class="lesson-content">
+        <h2>1. Суть инструмента: Системный промпт</h2>
+<p>Системный промпт — это скрытая инструкция, которая определяет поведение языковой модели до того, как она получит основной запрос пользователя. С точки зрения архитектуры n8n, системный промпт задает контекстуальные границы и формат выходных данных (например, JSON или структурированный текст), предотвращая галлюцинации и отклонения модели от заданного алгоритма.</p>
+<p>Модель использует эту инструкцию как фундаментальный приоритет. Если в системном промпте указано строго классифицировать данные на категории "Вопрос" и "Заказ", модель будет игнорировать любые попытки пользователя сменить тему или нарушить структуру вывода. Это превращает LLM из чат-бота в предсказуемый функциональный компонент автоматизации.</p>
+
+<h2>2. Интерфейс и логика настройки в n8n</h2>
+<p>Для реализации задачи классификации используется нода <strong>AI Agent</strong> в связке с моделью (например, OpenAI Chat Model). Настройка логики происходит в следующих полях:</p>
+<ul>
+    <li><strong>System Message:</strong> Находится внутри настроек ноды <strong>AI Agent</strong> или подключенного <strong>AI Memory / Prompt</strong> блока. Здесь вы прописываете правила: "Ты классификатор. Если текст содержит '?', верни 'Вопрос'. Если содержит цифры, верни 'Заказ'. Вывод строго в формате JSON: {"category": "...", "value": "..."}."</li>
+    <li><strong>JSON Output Parsing:</strong> В ноде AI Agent или последующей ноде <strong>Code</strong> необходимо включить принудительное чтение данных. Это позволяет извлечь значения из ответа модели для передачи в <strong>Google Sheets</strong>.</li>
+    <li><strong>Google Sheets (Append Row):</strong> В этой ноде вы указываете <strong>Resource: Row</strong> и <strong>Operation: Append</strong>. В полях колонок необходимо сопоставить ключи из вашего системного промпта (category и value) с заголовками столбцов в Google Таблице.</li>
+    <li><strong>Expression Editor:</strong> Используется для динамической подстановки данных. Чтобы передать результат классификации в таблицу, вы нажимаете кнопку <strong>Expression</strong> в поле ввода Google Sheets и перетаскиваете (drag-and-drop) нужные переменные из выходных данных ноды AI Agent.</li>
+</ul>
+
+<p>Важно: Если формат ответа модели нестабилен, используйте в настройках модели параметр <strong>Response Format</strong>, установив его в значение <strong>JSON Object</strong>. Это обеспечит строгое соответствие данных структуре, которую ожидает Google Sheets.</p>
+
+<h2>1. Пошаговая инструкция настройки</h2>
+<ul>
+    <li><strong>Настройка AI Agent:</strong> Откройте ноду <strong>AI Agent</strong>. В разделе <strong>System Message</strong> введите текст: "Анализируй текст. Если содержит '?', отвечай JSON: {"type": "Вопрос", "value": 0}. Если содержит цифру, отвечай JSON: {"type": "Заказ", "value": [число]}. Если ничего не подходит, отвечай JSON: {"type": "Прочее", "value": 0}."</li>
+    <li><strong>Подключение Google Sheets:</strong> Добавьте ноду <strong>Google Sheets</strong>, выберите операцию <strong>Append</strong>. Укажите ID вашего файла и название листа.</li>
+    <li><strong>Маппинг данных:</strong> Нажмите кнопку <strong>Add Field</strong> в ноде Google Sheets. В поле <strong>Value</strong> нажмите на иконку <strong>Expression</strong>. В открывшемся окне найдите ветку <strong>AI Agent</strong>, раскройте её и выберите поле <strong>output</strong> (или содержимое JSON-ответа). Убедитесь, что данные корректно подтянулись в колонки.</li>
+    <li><strong>Тестирование:</strong> Нажмите кнопку <strong>Test Step</strong> в каждой ноде по очереди, начиная с Webhook, чтобы проверить прохождение данных.</li>
+</ul>
+
+<h2>2. Почему это ломается: Ошибки и решения</h2>
+<ul>
+    <li><strong>Ошибка парсинга JSON:</strong> Модель добавила лишний текст до или после JSON. <em>Решение:</em> В системном промпте добавьте фразу: "Возвращай ТОЛЬКО чистый JSON без пояснительного текста".</li>
+    <li><strong>Конфликт типов данных:</strong> Google Sheets ожидает число, а модель передала строку "100". <em>Решение:</em> В настройках Google Sheets, в поле выбора колонки, измените формат ячейки на "Текст" или используйте ноду <strong>Edit Fields</strong> перед таблицей для принудительного изменения типа данных.</li>
+    <li><strong>Отсутствие данных в ответе:</strong> Пользователь отправил пустое сообщение, и нода AI Agent вернула ошибку из-за отсутствия входного текста. <em>Решение:</em> Добавьте ноду <strong>If</strong> до AI Agent, где условие: "Если поле сообщения не пустое (isEmpty = false)".</li>
+</ul>
+
+<h2>3. Практическое задание</h2>
+<ol>
+    <li>Реализуйте описанную выше схему в рабочем пространстве n8n.</li>
+    <li>Добавьте ноду <strong>Set</strong> после AI Agent, чтобы с помощью функции <strong>JSON.parse</strong> (через интерфейс Code-ноды или визуальный Expression) гарантированно разделить ответ модели на два отдельных поля для Google Sheets.</li>
+    <li>Выполните три тестовых запуска через <strong>Webhook URL</strong>:
+        <ul>
+            <li>Отправьте "Сколько стоит?".</li>
+            <li>Отправьте "Хочу 500 штук".</li>
+            <li>Отправьте "Привет".</li>
+        </ul>
+    </li>
+    <li>Проверьте <strong>Execution History</strong>: убедитесь, что в Google Таблицу корректно записаны значения во всех трех случаях.</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_4_4"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

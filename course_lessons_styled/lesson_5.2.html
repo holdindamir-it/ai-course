@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 5.2: Нода OpenAI в n8n: Chat, Completion, Embeddings — что выбрать</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 5.2. Нода OpenAI в n8n: Chat, Completion, Embeddings — что выбрать</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть инструментов OpenAI в n8n</h2>
+<p>Нода OpenAI в n8n — это программный интерфейс для взаимодействия с вычислительными моделями компании OpenAI. Технически она работает по принципу API-запроса: n8n отправляет данные на сервер OpenAI, модель обрабатывает их согласно заданным алгоритмам, и возвращает структурированный JSON-ответ. Вы не запускаете нейросеть локально, а используете готовый вычислительный ресурс через облачное соединение.</p>
+<p>Выбор режима работы ноды определяет тип операции, которую вы запрашиваете у модели. Каждый режим требует специфической структуры входных данных и возвращает ответ в разном формате, что критически влияет на дальнейшую обработку информации внутри вашего сценария автоматизации.</p>
+
+<h3>Разбор операций и интерфейса ноды</h3>
+<p>В настройках ноды OpenAI поле <strong>Operation</strong> является определяющим для логики вашего процесса:</p>
+<ul>
+    <li><strong>Chat (Chat Completion):</strong> Основной режим для ведения диалога. Вы передаете массив сообщений (роль <em>System</em> задает поведение, <em>User</em> — ваш запрос). Используйте этот режим для 95% задач автоматизации: написание текстов, анализ данных или классификация запросов.</li>
+    <li><strong>Completion:</strong> Устаревший формат (Legacy). Используется для генерации продолжения текста. В отличие от <em>Chat</em>, он не поддерживает концепцию контекстного диалога. В современной разработке практически не применяется, заменяется на <em>Chat</em> с моделью gpt-3.5-turbo или gpt-4o.</li>
+    <li><strong>Embeddings:</strong> Режим для преобразования текста в числовой вектор (массив чисел). Этот режим <strong>не генерирует текст</strong>. Он используется для подготовки данных к поиску по сходству или созданию баз знаний (векторных баз данных). Результат операции — массив чисел, который нельзя отправить пользователю как ответ, но можно использовать для сравнения смыслов разных документов.</li>
+</ul>
+
+<h3>Технические поля интерфейса</h3>
+<ul>
+    <li><strong>Resource:</strong> Выбираем "Chat" для большинства задач.</li>
+    <li><strong>Model:</strong> Поле для выбора идентификатора модели (например, <em>gpt-4o</em> или <em>gpt-4o-mini</em>). От модели зависят стоимость запроса и лимит токенов (объем текста).</li>
+    <li><strong>Messages:</strong> Ключевой блок настройки. Здесь вы добавляете элементы (Add Item). Каждый элемент имеет поле <strong>Role</strong> (System, User, Assistant) и <strong>Content</strong> (сам текст сообщения).</li>
+    <li><strong>Options:</strong> Здесь находятся параметры <em>Temperature</em> (от 0 до 1). 0 — делает модель предсказуемой (подходит для работы с данными), 1 — делает модель более вариативной и "творческой".</li>
+</ul>
+
+<p>При выборе <em>Embeddings</em> интерфейс ноды меняется: исчезает поле <em>Messages</em> и появляется поле <em>Text</em>, куда подается строка для векторизации. На выходе нода вернет объект <em>embedding</em>, содержащий список значений с плавающей запятой.</p>
+
+<h3>Практическая настройка: переход от Chat к Embeddings</h3>
+<p>Для переключения логики работы ноды выполните следующие действия:</p>
+<ul>
+    <li>Откройте ноду <strong>OpenAI</strong> в вашем сценарии.</li>
+    <li>В выпадающем списке <strong>Operation</strong> выберите значение <strong>Embed</strong>.</li>
+    <li>В поле <strong>Text</strong> нажмите кнопку <strong>Add Expression</strong>. В открывшемся окне выберите данные из входящего Webhook, например, <code>{{ $json.body.message }}</code>.</li>
+    <li>В поле <strong>Model</strong> выберите актуальную версию, например, <em>text-embedding-3-small</em>.</li>
+    <li>Нажмите кнопку <strong>Execute Node</strong>. В окне вывода вы увидите массив чисел (вектор), а не текст. Это означает, что данные успешно преобразованы для машинного анализа.</li>
+</ul>
+
+<h3>Технические причины сбоев и их устранение</h3>
+<ul>
+    <li><strong>Ошибка 401 (Unauthorized):</strong> Проблема в Credentials. 
+        <strong>Решение:</strong> Перейдите в настройки Credentials ноды OpenAI, убедитесь, что API Key скопирован без лишних пробелов в начале или конце. Проверьте статус аккаунта в личном кабинете OpenAI (наличие активных кредитов).</li>
+    <li><strong>Ошибка 429 (Rate Limit):</strong> Вы превысили лимит запросов в минуту или объем токенов. 
+        <strong>Решение:</strong> В настройках ноды (вкладка <em>Settings</em>) включите <strong>Retry On Fail</strong>. Это заставит n8n повторить запрос через короткий промежуток времени автоматически.</li>
+    <li><strong>Несоответствие структуры данных:</strong> Попытка вывода поля <em>content</em> в <em>Respond to Webhook</em> после операции <em>Embeddings</em>.
+        <strong>Решение:</strong> Поскольку <em>Embeddings</em> не возвращает поле <em>content</em>, ваш Webhook выдаст ошибку "Undefined". Используйте ноду <strong>Edit Fields (Set)</strong> перед ответом, чтобы создать статичное сообщение: "Векторизация завершена", если поле <em>content</em> отсутствует в выходных данных.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+<ol>
+    <li>Создайте дубликат текущего сценария.</li>
+    <li>В ноде OpenAI настройте режим <strong>Chat</strong>, добавьте роль <em>System</em> с инструкцией: "Ты — технический ассистент, отвечай только цифрами".</li>
+    <li>Подключите ноду <strong>Edit Fields (Set)</strong> между OpenAI и Webhook. В ней добавьте поле <code>result</code>, в значении которого используйте выражение для получения первого элемента массива <code>{{ $json.choices[0].message.content }}</code>.</li>
+    <li>Протестируйте цепочку: отправьте запрос через Postman, убедитесь, что в ответе пришло только число.</li>
+    <li>Измените операцию на <em>Embeddings</em> и посмотрите в логах <em>Execution Data</em>, как меняется структура JSON (исчезает поле <em>choices</em> и появляется поле <em>embedding</em>).</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_5_2"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

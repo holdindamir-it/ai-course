@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 3.2: Подключение бота к n8n: Webhook и Polling — в чём разница</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 3.2. Подключение бота к n8n: Webhook и Polling — в чём разница</h1>
+    
+    <div class="lesson-content">
+        <h2>1. Суть методов получения данных: Webhook против Polling</h2>
+<p>Взаимодействие n8n с Telegram API происходит через отправку и получение HTTP-запросов. Для получения входящих сообщений от бота существуют два фундаментальных метода: Webhook и Polling.</p>
+<p><strong>Webhook (Вебхук)</strong> — это метод «активного оповещения». Сервер Telegram сам отправляет данные на ваш URL-адрес n8n в ту же секунду, когда пользователь пишет боту. Это обеспечивает мгновенную реакцию и минимальную нагрузку на ресурсы сервера. В n8n для этого используется нода <strong>Telegram Trigger</strong>.</p>
+<p><strong>Polling (Опрос)</strong> — это метод «периодического запроса». n8n с заданным интервалом времени (например, каждые 5 секунд) спрашивает сервер Telegram: «Есть ли новые сообщения?». Если сообщения есть, сервер их отдает. Метод требует постоянного поддержания активного соединения и менее эффективен при высокой нагрузке, но полезен, если у вашего экземпляра n8n нет публичного HTTPS-адреса, доступного извне.</p>
+
+<h2>2. Разбор интерфейса и логики в n8n</h2>
+<p>Выбор метода получения событий определяется типом триггерной ноды и ее настройками внутри рабочего пространства n8n:</p>
+<ul>
+    <li><strong>Нода Telegram Trigger:</strong> Это основной инструмент для работы с Webhook. 
+        <ul>
+            <li><strong>Authentication:</strong> Поле для выбора сохраненных Credentials (токена бота).</li>
+            <li><strong>Updates:</strong> Список типов событий (сообщения, нажатия кнопок), на которые будет реагировать триггер.</li>
+            <li><strong>Webhook URL:</strong> n8n автоматически генерирует уникальный URL, который регистрируется в Telegram API как точка приема данных.</li>
+        </ul>
+    </li>
+    <li><strong>Логика Polling (в рамках ноды Telegram):</strong> Если вы используете обычную ноду <strong>Telegram</strong> (не Trigger), работа происходит по модели «Запрос-Ответ». 
+        <ul>
+            <li><strong>Resource:</strong> Выбор объекта (например, Message).</li>
+            <li><strong>Operation:</strong> Выбор действия (Send, Edit, Delete).</li>
+            <li><strong>Polling в n8n:</strong> При использовании ноды <strong>Poll Telegram</strong>, в интерфейсе настраивается поле <strong>Interval</strong> (время задержки между опросами).</li>
+        </ul>
+    </li>
+    <li><strong>Панель настроек (Workflow Settings):</strong> Здесь можно настроить глобальное поведение триггера, включая опцию <strong>Save Execution Progress</strong>, которая позволяет отслеживать, какие именно сообщения были обработаны, чтобы избежать дублирования команд при повторном запуске сценария.</li>
+</ul>
+
+<h2>1. Практическая настройка Webhook в n8n</h2>
+<p>Для активации метода Webhook выполните следующие действия в редакторе:</p>
+<ul>
+    <li>Откройте редактор n8n и перетащите на рабочее поле ноду <strong>Telegram Trigger</strong>.</li>
+    <li>В поле <strong>Credential</strong> выберите созданное ранее подключение к вашему боту.</li>
+    <li>В выпадающем списке <strong>Updates</strong> выберите <strong>message</strong> (это позволит боту реагировать на текстовые сообщения).</li>
+    <li>В верхней панели редактора переключите тумблер <strong>Production</strong> в состояние <strong>On</strong>. Это действие отправляет команду серверу Telegram «закрепить» ваш публичный URL для получения событий.</li>
+    <li>Нажмите кнопку <strong>Listen for Event</strong> в интерфейсе ноды.</li>
+    <li>Откройте Telegram, найдите своего бота и отправьте ему любое сообщение. В интерфейсе n8n вы увидите JSON-объект с данными сообщения.</li>
+</ul>
+
+<h2>2. Ошибки и методы устранения</h2>
+<p>Чаще всего сценарий перестает работать по следующим причинам:</p>
+<ul>
+    <li><strong>Ошибка 404/Connection Refused:</strong> Ваш n8n работает на локальном компьютере (localhost) без внешнего IP или сервиса Tunneling (например, ngrok). <strong>Решение:</strong> Telegram не может «достучаться» до вашего компьютера. Используйте облачную версию n8n или настройте тоннель для публикации локального порта в интернет.</li>
+    <li><strong>Неверный токен:</strong> Вы сменили бота в BotFather, но не обновили токен в ноде <strong>Credentials</strong>. <strong>Решение:</strong> Зайдите в меню <strong>Credentials</strong> (слева), выберите Telegram API и вставьте актуальный токен, полученный в BotFather.</li>
+    <li><strong>Конфликт Webhook:</strong> Если вы используете один и тот же токен в двух разных экземплярах n8n или сторонних сервисах. <strong>Решение:</strong> Telegram разрешает только один активный Webhook. Отключите все другие системы, использующие этот токен, и пересохраните (переоткройте) ноду Telegram Trigger в рабочем сценарии.</li>
+</ul>
+
+<h2>3. Практическое задание</h2>
+<ol>
+    <li>Переименуйте ноду <strong>Telegram Trigger</strong>, добавив в название слово "Webhook".</li>
+    <li>Настройте ноду так, чтобы при получении сообщения бот автоматически пересылал обратно тот же текст, который вы отправили (используйте выражение <code>{{ $json.message.text }}</code> в ноде Telegram).</li>
+    <li>Нажмите кнопку <strong>Activate</strong> в правом верхнем углу интерфейса n8n, чтобы сценарий работал в фоновом режиме постоянно.</li>
+    <li>Закройте вкладку с n8n, напишите боту в Telegram и убедитесь, что ответ приходит без открытого окна редактора.</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_3_2"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

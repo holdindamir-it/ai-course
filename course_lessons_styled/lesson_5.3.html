@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 5.3: Автоматическая обработка входящих сообщений с помощью GPT</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 5.3. Автоматическая обработка входящих сообщений с помощью GPT</h1>
+    
+    <div class="lesson-content">
+        <h2>Суть интеграции OpenAI в n8n</h2>
+<p>Интеграция OpenAI в n8n работает как посредник между вашим входящим запросом (Webhook) и API нейросети. Нода OpenAI принимает JSON-объект, содержащий текстовое сообщение, отправляет его на серверы OpenAI, где модель обрабатывает данные согласно системной инструкции, и возвращает ответ в формате JSON.</p>
+<p>В контексте автоматизации эта цепочка преобразует неструктурированные данные в предсказуемые форматы. Весь процесс является асинхронным обменом данными: n8n ожидает ответа от API, после чего передает полученные данные в следующую ноду сценария для дальнейшей обработки или записи в базу данных.</p>
+
+<h3>Интерфейс и логика настройки ноды OpenAI</h3>
+<ul>
+    <li><strong>Credential (Учетные данные):</strong> Поле для выбора ключа API. Здесь хранятся учетные данные (API Key), которые авторизуют ваш доступ к серверам OpenAI.</li>
+    <li><strong>Resource и Operation:</strong> Выпадающие списки, определяющие метод работы. Для классического диалога выбирается <em>Chat</em>, для генерации векторов текста — <em>Embeddings</em>. Изменение этой настройки полностью меняет структуру входных и выходных параметров.</li>
+    <li><strong>Model:</strong> Поле выбора версии нейросети (например, <em>gpt-3.5-turbo</em> или <em>gpt-4o</em>). От выбора модели зависит лимит токенов и формат возвращаемого JSON-объекта.</li>
+    <li><strong>Messages:</strong> Массив объектов. Внутри каждого объекта задается <em>Role</em> (System, User, Assistant) и <em>Content</em>. 
+        <ul>
+            <li><strong>System:</strong> задает жесткие правила поведения и формат вывода (например, ограничение на ответ только цифрами).</li>
+            <li><strong>User:</strong> содержит динамический контент, который передается через Webhook.</li>
+        </ul>
+    </li>
+    <li><strong>Expression (Выражения):</strong> Кнопка (иконка шестеренки или "Expression"), позволяющая динамически подставлять данные из предыдущих шагов сценария, например, <code>{{ $json.body.message }}</code>, что делает сценарий гибким.</li>
+</ul>
+
+<h3>Контроль данных через интерфейс Execution Data</h3>
+<p>После каждого запуска (кнопка <strong>Execute Workflow</strong>) n8n фиксирует результат в панели <em>Execution Data</em>. Вкладка <strong>Output</strong> отображает дерево JSON-структуры. Ваша задача — отследить путь к нужному значению (например, <code>choices -> [0] -> message -> content</code>). Ошибки в цепочке чаще всего возникают из-за неправильного указания пути к полю в ноде <strong>Edit Fields (Set)</strong>, если структура JSON изменилась из-за смены операции (например, при переходе с Chat на Embeddings).</p>
+
+<h3>Пошаговая настройка узла обработки</h3>
+<ul>
+    <li>Откройте редактор сценария и перетащите ноду <strong>Edit Fields (Set)</strong> на рабочее поле, соединив выход ноды OpenAI с входом этой ноды.</li>
+    <li>Нажмите на ноду <strong>Edit Fields (Set)</strong>. В открывшейся панели выберите кнопку <strong>Add Field</strong>, затем выберите тип <strong>String</strong>.</li>
+    <li>В поле <strong>Name</strong> введите <code>result</code>.</li>
+    <li>В поле <strong>Value</strong> нажмите на иконку шестеренки и выберите пункт <strong>Add Expression</strong>.</li>
+    <li>В открывшемся редакторе выражений перейдите во вкладку <strong>Current Node > Input Data > JSON</strong>. Найдите путь <code>choices</code>, раскройте его, затем <code>0</code>, далее <code>message</code> и выберите <code>content</code>. Убедитесь, что в поле выражения появилась строка: <code>{{ $json.choices[0].message.content }}</code>.</li>
+    <li>Нажмите кнопку <strong>Save</strong> в нижней части панели.</li>
+</ul>
+
+<h3>Технические причины сбоев и их устранение</h3>
+<ul>
+    <li><strong>Ошибка пути к данным (Cannot read property of undefined):</strong> Возникает, если структура ответа OpenAI изменилась (например, при переключении на Embeddings), а путь в ноде остался прежним. <strong>Решение:</strong> Нажмите на ноду OpenAI, запустите её отдельно, посмотрите актуальную структуру во вкладке <strong>Output</strong> и заново перетащите путь в поле выражения в ноде Edit Fields.</li>
+    <li><strong>Неверная роль (System/User):</strong> Если модель игнорирует инструкцию, значит, системное сообщение не было отправлено первым в массиве. <strong>Решение:</strong> В ноде OpenAI убедитесь, что блок с ролью <em>System</em> стоит выше блока с ролью <em>User</em> в списке параметров <em>Messages</em>.</li>
+    <li><strong>Пустой результат (Null):</strong> Возникает, если в ноде Webhook не переданы данные, на которые настроена нода OpenAI. <strong>Решение:</strong> Проверьте вкладку <em>Input</em> в ноде OpenAI. Если она пуста, значит Webhook не принял данные. Проведите тестовый запрос из Postman еще раз и убедитесь, что в верхнем правом углу Webhook появилась зеленая галочка.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+<p>Для закрепления материала выполните следующие действия:</p>
+<ul>
+    <li>Создайте новое поле в ноде <strong>Edit Fields (Set)</strong> с именем <code>model_used</code>.</li>
+    <li>В поле <strong>Value</strong> через кнопку <strong>Add Expression</strong> выберите значение поля <code>model</code>, которое находится в корневой структуре ответа OpenAI.</li>
+    <li>Добавьте ноду <strong>Webhook</strong> в режиме <em>Response: On Received</em> в конец цепочки.</li>
+    <li>Настройте ноду <strong>Respond to Webhook</strong> так, чтобы она возвращала пользователю JSON-объект, содержащий оба поля: <code>result</code> и <code>model_used</code>.</li>
+    <li>Успешно протестируйте сценарий, отправив любой текст через Postman и получив в ответ структурированный JSON с числом и названием модели.</li>
+</ul>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_5_3"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

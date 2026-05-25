@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 1.7: Отладка и поиск ошибок: как читать красные ноды</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 1.7. Отладка и поиск ошибок: как читать красные ноды</h1>
+    
+    <div class="lesson-content">
+        <h2>Принципы отладки: визуализация сбоев</h2>
+<p>В n8n визуализация ошибок реализована через изменение состояния ноды на красный цвет. Когда нода окрашивается в красный, это означает, что выполнение процесса прервалось из-за необработанного исключения. Система фиксирует ошибку на уровне выполнения конкретного этапа, блокируя передачу данных (JSON-объектов) дальше по цепочке.</p>
+<p>Механизм отладки основан на сравнении входных данных (Input) с логикой, заданной внутри ноды. Если нода не может обработать входящий массив или объект согласно заданным правилам (например, неверный тип данных или отсутствие ключа), она переходит в статус <strong>Error</strong>, возвращая лог системного сбоя вместо ожидаемого выходного пакета.</p>
+
+<h3>Интерфейс отладки и диагностика</h3>
+<ul>
+    <li><strong>Индикатор статуса ноды:</strong> Появление красного значка «крестик» или восклицательного знака поверх ноды сигнализирует о критическом сбое. Клик по ноде открывает панель <strong>Execution Data</strong>.</li>
+    <li><strong>Панель Input/Output:</strong> При возникновении ошибки вкладка <strong>Output</strong> будет пустой или содержать системное сообщение об ошибке (Error Message). Сравните структуру входных данных во вкладке <strong>Input</strong> с требованиями настроек ноды.</li>
+    <li><strong>Вкладка Error:</strong> В правой части панели параметров ноды появится дополнительная вкладка <strong>Error</strong>. В ней находится текстовое описание причины: например, <em>"Expression Error"</em> или <em>"Invalid Data Type"</em>.</li>
+    <li><strong>Инспектор выражений (Expression Editor):</strong> Если ошибка произошла внутри поля с выражением, откройте редактор <strong>Expression</strong>. Подсветка синтаксиса укажет на некорректный путь к переменной (например, если вы пытаетесь обратиться к полю, которого нет во входящем объекте).</li>
+    <li><strong>Кнопка Execute Node:</strong> Позволяет запустить конкретный узел повторно после внесения исправлений, не перезапуская весь сценарий целиком. Это основной инструмент для точечной отладки данных.</li>
+</ul>
+
+<h3>Алгоритм локализации ошибки в узле</h3>
+<p>Для обнаружения причины сбоя при работе с данными следуйте пошаговому алгоритму:</p>
+<ul>
+    <li>Кликните на красную ноду. В правой панели перейдите во вкладку <strong>Error</strong>.</li>
+    <li>Скопируйте текст ошибки в буфер обмена. Если сообщение содержит <em>"undefined"</em>, значит, нода пытается обратиться к полю, которого нет в JSON-структуре на входе.</li>
+    <li>Перейдите во вкладку <strong>Input</strong>. Прокрутите структуру данных до конца, чтобы убедиться, что имя ключа в JSON в точности совпадает с тем, что вы указали в <strong>Expression</strong> (регистр символов имеет значение).</li>
+    <li>Если ошибка указывает на <strong>Expression Error</strong>, откройте поле ввода, нажмите на иконку <em>Expression</em> и проверьте, не используется ли функция преобразования типов (например, <code>.toString()</code>) на значении, которое пришло как <code>null</code>.</li>
+</ul>
+
+<h3>Типичные технические сбои и их устранение</h3>
+<ul>
+    <li><strong>Несоответствие типов данных:</strong> Вы пытаетесь применить строковый метод к числу или наоборот. <em>Решение:</em> используйте явное приведение типов в выражении, например, оберните значение в <code>String()</code> или <code>Number()</code>.</li>
+    <li><strong>Отсутствующий ключ (ReferenceError):</strong> Нода запрашивает поле, которое не было передано от предыдущего узла. <em>Решение:</em> используйте оператор опциональной цепочки, например <code>{{ $json.user?.id }}</code>, вместо прямого обращения.</li>
+    <li><strong>Синтаксическая ошибка в выражении:</strong> Пропущенная фигурная скобка или лишний символ в JS-коде. <em>Решение:</em> интерфейс n8n подсветит красным строку с ошибкой внутри редактора выражений; удалите неверные символы, пока подсветка не станет зеленой.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+<ol>
+    <li>Создайте умышленную ошибку: в ноде <strong>Edit Fields (Set)</strong> в поле <code>user_id_string</code> введите несуществующее имя переменной (например, <code>{{ $json.non_existent_key }}</code>).</li>
+    <li>Нажмите кнопку <strong>Execute Node</strong> и дождитесь появления красного индикатора.</li>
+    <li>Откройте вкладку <strong>Error</strong> и изучите текст системного сообщения.</li>
+    <li>Исправьте ошибку: верните корректное выражение для поля <code>userId</code>, используя визуальный выбор переменной в левой колонке <em>Input Data</em>.</li>
+    <li>Убедитесь, что нода окрасилась в зеленый цвет, а во вкладке <strong>Output</strong> отображается корректный JSON-объект.</li>
+</ol>
+    </div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    // Проверка сессии в едином формате v10
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена:", user.email);
+        } else {
+            console.log("Сессия не найдена, переход на логин");
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Логика сохранения прогресса
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        if (!currentUserId) {
+            alert("Подождите секунду, загружается профиль...");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            // Динамический ключ урока для базы (например, lesson_1_2)
+            const progressUpdate = {};
+            progressUpdate["lesson_1_7"] = true;
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Успешная запись!");
+            window.location.href = "../dashboard.html";
+        } catch (error) {
+            console.error("Ошибка записи:", error);
+            alert("Не удалось сохранить: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>
