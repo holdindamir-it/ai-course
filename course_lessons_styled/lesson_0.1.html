@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Урок 0.1: Кто такой специалист по AI-автоматизации (технический обзор)</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
         body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
@@ -41,7 +36,7 @@
     
     <div class="lesson-content">
         <h2>Суть инструмента AI-автоматизации</h2>
-        <p>Специалист по AI-автоматизации работает с визуальными средами разработки, такими как n8n. Технически это процесс создания логических цепочек (воркфлоу), где данные передаются между программными интерфейсами (API) различных сервисов. Вместо написания программного кода вы соединяете блоки, называемые <strong>нодами</strong>, в единую последовательность.</p>
+        <p>Специалист по AI-автоматизации работает с визуальными средами разработки, такими как n8n. Технически это процесс создания логических цепочек (воркфлоу), где данные передаются между программными интерфейсами (API) различных сервисов. Вместо написания программного кода вы соединяете blocks, называемые <strong>нодами</strong>, в единую последовательность.</p>
         <p>Система работает по принципу обработки событий: входящий сигнал (например, получение письма или заполнение формы) запускает цепочку действий. Автоматизация пересылает данные из одной системы в другую, применяя к ним заданные трансформации или пропуская их через AI-модели для анализа, классификации или генерации контента, после чего результат передается в конечную точку назначения.</p>
 
         <h3>Интерфейс и логика визуального программирования</h3>
@@ -85,8 +80,11 @@
     <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
 </div>
 
-<script>
-    // Конфигурация Firebase
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
     const firebaseConfig = {
         apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
         authDomain: "dadbd-b404c.firebaseapp.com",
@@ -97,48 +95,51 @@
         measurementId: "G-BC989QFLTE"
     };
 
-    // Инициализация
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     let currentUserId = null;
 
     // Перехват сессии
-    auth.onAuthStateChanged((user) => {
+    onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserId = user.uid;
-            console.log("Авторизация прошла:", user.email);
+            console.log("Авторизация подтверждена в уроке:", user.email);
         } else {
-            alert("Сессия не найдена. Перенаправляю на страницу входа.");
+            console.log("Сессия не найдена, редирект на index.html");
             window.location.href = "../index.html";
         }
     });
 
-    // Обработчик кнопки
+    // Обработчик кнопки завершения урока
     document.getElementById('btn-complete').addEventListener('click', async () => {
-        alert("Шаг 1: Кнопка нажата! Проверяем сессию...");
-
+        console.log("Кнопка нажата!");
+        
         if (!currentUserId) {
-            alert("Шаг 2 Ошибка: Вы не авторизованы или база еще грузится.");
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
             return;
         }
 
-        alert("Шаг 2: Вы авторизованы. Отправляем прогресс в Firebase...");
-
         try {
-            const docRef = db.collection("users").doc(currentUserId);
+            // Ссылка на документ в коллекции users
+            const docRef = doc(db, "users", currentUserId);
             
-            const progressUpdate = {};
-            progressUpdate["lesson_0_1"] = true;
+            // Пакет обновлений. База сама создаст поле lesson_0_1, если его нет
+            const progressUpdate = {
+                "lesson_0_1": true
+            };
 
-            await docRef.set(progressUpdate, { merge: true });
+            // Запись методом слияния
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
             
-            alert("Шаг 3: ПРОГРЕСС УСПЕШНО СОХРАНЕН! Возвращаемся в меню.");
+            // Возврат в личный кабинет
             window.location.href = "../dashboard.html";
             
         } catch (error) {
-            alert("КРИТИЧЕСКАЯ ОШИБКА FIREBASE: " + error.message);
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
         }
     });
 </script>
