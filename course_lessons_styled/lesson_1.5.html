@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 1.5: Циклы и массивы (нода Loop / Split in Batches)</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 1.5. Циклы и массивы (нода Loop / Split in Batches)</h1>
+    
+    <div class="lesson-content">
+<h2>Суть инструментов Split In Batches и Loop</h2>
+<p>В автоматизации n8n данные часто приходят в виде массивов — списков объектов (например, список из 100 пользователей). Стандартные ноды обрабатывают весь массив целиком. Если требуется применить логику к каждому элементу по отдельности (например, отправить email каждому пользователю из списка), используются ноды цикла.</p>
+<p><strong>Split In Batches</strong> — это нода-распределитель. Она принимает массив на вход и «откусывает» от него заданное количество элементов за один проход. <strong>Loop (нода Loop Over Items)</strong> автоматически перебирает массив поэлементно. Когда ноды внутри цикла завершают работу, управление возвращается в начало, пока массив не будет исчерпан.</p>
+
+<h2>Разбор интерфейса и логики работы</h2>
+<ul>
+    <li><strong>Split In Batches:</strong>
+        <ul>
+            <li><strong>Batch Size:</strong> поле ввода, определяющее количество элементов, которые пройдут через ноду за один цикл. Установка значения "1" заставляет систему обрабатывать данные строго по одной записи.</li>
+            <li><strong>Output:</strong> нода имеет два выхода. Верхний выход передает порцию данных в поток обработки. Нижний выход (Loop) замыкается обратно на вход потока, чтобы повторить итерацию.</li>
+        </ul>
+    </li>
+    <li><strong>Loop Over Items:</strong>
+        <ul>
+            <li>Эта нода заменяет ручную настройку Split In Batches. Она автоматически определяет количество элементов в массиве.</li>
+            <li><strong>Loop выход:</strong> этот порт соединяется с последней нодой в цепочке обработки (обычно с нодой типа Set или HTTP Request).</li>
+            <li><strong>Finished выход:</strong> активируется только тогда, когда все элементы массива были последовательно обработаны. К нему подключаются ноды завершения (например, отчет о выполнении).</li>
+        </ul>
+    </li>
+    <li><strong>Особенности работы с данными:</strong>
+        <ul>
+            <li>В процессе цикла ноды имеют доступ к текущему элементу через выражение <strong>{{ $json.имя_поля }}</strong>.</li>
+            <li>Чтобы избежать бесконечного цикла, логическая связь всегда должна быть замкнута через обратную стрелку (соединение нижнего порта ноды цикла с входом первой ноды в теле цикла).</li>
+        </ul>
+    </li>
+</ul>
+
+<h2>Пошаговая настройка цикла</h2>
+<p>Для создания рабочего цикла в n8n выполните следующие действия:</p>
+<ul>
+    <li>Добавьте ноду <strong>Split In Batches</strong> сразу после ноды, получающей массив данных (например, HTTP Request).</li>
+    <li>В поле <strong>Batch Size</strong> ноды Split In Batches установите число <strong>1</strong>. Это обеспечит поочередную обработку каждого элемента.</li>
+    <li>Соедините верхний выход (Output) ноды Split In Batches с нодой, которую вы хотите применить к каждому элементу (например, нода Set).</li>
+    <li>Протяните связь от выхода ноды Set обратно ко входу ноды Split In Batches. Это создает петлю обратной связи (Loop).</li>
+    <li>Запустите процесс кнопкой <strong>Execute Workflow</strong>. Нода Split In Batches будет автоматически переключаться между порциями данных до тех пор, пока массив не опустеет.</li>
+</ul>
+
+<h2>Типичные ошибки и способы их устранения</h2>
+<ul>
+    <li><strong>Бесконечный цикл:</strong> Возникает, если вы не соединили выход последнего действия с входом ноды цикла. <em>Решение:</em> проверьте наличие визуальной линии, возвращающейся к Split In Batches.</li>
+    <li><strong>Потеря данных из-за перезаписи:</strong> Происходит, если в ноде Set вы не используете опцию <strong>Append to Existing</strong> или сохраняете результат в переменную с тем же именем. <em>Решение:</em> используйте разные имена полей для хранения промежуточных результатов каждой итерации.</li>
+    <li><strong>Неверный ввод (Input Type):</strong> Нода цикла выдает ошибку, если на вход поступает объект вместо массива. <em>Решение:</em> проверьте через вкладку <em>Input</em>, что предыдущая нода выдает список (иконка массива []), а не единичный объект. Если данных нет, добавьте ноду <em>Edit Fields (Set)</em> для принудительного создания массива.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ol>
+    <li>Создайте HTTP Request, который получает данные по адресу <em>https://jsonplaceholder.typicode.com/posts</em>.</li>
+    <li>Добавьте ноду <em>Split In Batches</em> с <em>Batch Size = 1</em>.</li>
+    <li>Подключите ноду <em>Set</em>, которая берет поле <em>title</em> из текущего элемента и переименовывает его в <em>processed_title</em>.</li>
+    <li>Замкните выход ноды <em>Set</em> на вход ноды <em>Split In Batches</em>.</li>
+    <li>Нажмите <em>Execute Workflow</em> и в панели <em>Execution History</em> пронаблюдайте, как нода <em>Split In Batches</em> последовательно меняет значение счетчика итераций для каждого объекта из JSON-ответа.</li>
+</ol>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_1_5": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

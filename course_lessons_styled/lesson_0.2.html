@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 0.2: Инструменты, которые мы установим, и результат</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 0.2. Инструменты, которые мы установим, и результат</h1>
+    
+    <div class="lesson-content">
+<h2>Инструментарий автоматизации: n8n и интеграционный стек</h2>
+
+<p><strong>n8n</strong> — это среда визуального программирования (Workflow Automation Tool), работающая по принципу потоков данных (data flow). Программа представляет собой рабочее поле (Canvas), на котором размещаются узлы (Nodes). Каждый узел выполняет атомарную операцию: прием запроса, отправку данных в API, трансформацию текста или запись в базу данных. Соединение узлов линиями создает логический конвейер, по которому передается JSON-объект с данными.</p>
+
+<p><strong>Google Sheets API</strong> и <strong>OpenAI API</strong> выступают в роли внешних сервисов, к которым n8n обращается для выполнения специфических задач: хранения данных и генерации контента на основе нейросетевых моделей. n8n выступает "оркестратором", который связывает эти сервисы между собой, передавая выходные данные одного узла на вход другому.</p>
+
+<h3>Разбор интерфейса n8n</h3>
+
+<ul>
+    <li><strong>Nodes Panel (Боковая панель)</strong>: Содержит список всех доступных интеграций. Поиск осуществляется через строку <em>Search</em>. После клика на название ноды она добавляется на рабочее поле.</li>
+    <li><strong>Canvas (Рабочее поле)</strong>: Основная область для размещения нод. Связи между нодами создаются путем перетаскивания (Drag-and-Drop) коннектора (кружка с правой стороны ноды) к левому коннектору следующей ноды.</li>
+    <li><strong>Node Configuration (Панель настроек)</strong>: Открывается при двойном клике на ноду. 
+        <ul>
+            <li><strong>Credential</strong>: Поле для авторизации через токены или API-ключи. Вкладка <em>Create New Credential</em> позволяет ввести секретный ключ сервиса.</li>
+            <li><strong>Resource & Operation</strong>: Выпадающие списки для выбора действия. Например, для Google Sheets это "Rows" (ресурс) и "Append" (операция).</li>
+            <li><strong>Expression Editor</strong>: Редактор выражений. Позволяет использовать данные из предыдущих узлов. Вызывается кликом на иконку шестеренки или при нажатии на поле ввода. Позволяет динамически подставлять переменные (например, {{ $json.user_query }}).</li>
+        </ul>
+    </li>
+    <li><strong>Workflow Controls (Верхняя панель)</strong>: Содержит кнопку <em>Execute Workflow</em> для ручного запуска процесса и переключатель <em>Production/Test</em>.</li>
+    <li><strong>Execution History (Панель выполнения)</strong>: Доступна после запуска. Показывает структуру JSON-данных, которые передаются между нодами на каждом этапе. Вкладка <em>Input/Output</em> позволяет видеть, какие данные нода получила от предыдущей и что отправила следующей.</li>
+</ul>
+
+<h3>Пошаговая инструкция по настройке цепочки</h3>
+
+<ul>
+    <li><strong>Создание Webhook:</strong> Нажмите кнопку "+" в панели нод, введите "Webhook". Выберите метод <em>POST</em>. Скопируйте <em>Test URL</em>. В поле <em>Authentication</em> оставьте <em>None</em>. Нажмите <em>Listen for Test Event</em>, чтобы перевести ноду в режим ожидания данных.</li>
+    <li><strong>Настройка OpenAI:</strong> Добавьте ноду "OpenAI". В поле <em>Credential</em> выберите <em>Create New</em> и вставьте ваш API-ключ. В поле <em>Resource</em> выберите "Chat". В поле <em>Prompt</em> нажмите на иконку шестеренки -> <em>Add Expression</em>. В открывшемся окне найдите в списке доступных данных <em>Webhook</em> -> <em>body</em> -> <em>user_query</em>. Нажмите <em>Save</em>.</li>
+    <li><strong>Настройка Google Sheets:</strong> Добавьте ноду "Google Sheets". В <em>Credential</em> авторизуйте свой аккаунт Google. В поле <em>Resource</em> выберите "Row", в <em>Operation</em> — "Append". Укажите <em>Document ID</em> (из ссылки на вашу таблицу) и <em>Sheet Name</em>. Нажмите <em>Add Column</em> дважды: для первого столбца выберите <em>Expression</em> с данными из <em>Webhook</em>, для второго — данные из ноды <em>OpenAI</em> (поле <em>message.content</em>).</li>
+</ul>
+
+<h3>Технические причины сбоев и их устранение</h3>
+
+<ul>
+    <li><strong>Ошибка авторизации (401/403):</strong> Проблема в невалидном API-ключе OpenAI или отсутствии прав доступа у n8n к Google Таблице. <em>Решение:</em> проверьте настройки в разделе <em>Credentials</em>, удалите старую запись и создайте новую, перепроверив права доступа.</li>
+    <li><strong>Отсутствие данных в Expression (JSON path error):</strong> Возникает, если вы не прогнали тестовый запрос через Webhook заранее. <em>Решение:</em> нода не видит структуру данных, если она не была получена. Отправьте тестовый JSON через Postman или сервис-тестировщик по <em>Test URL</em>, чтобы n8n "увидел" структуру <em>user_query</em>.</li>
+    <li><strong>Превышение таймаута:</strong> Если OpenAI долго отвечает, процесс прерывается. <em>Решение:</em> откройте <em>Settings</em> ноды OpenAI, найдите поле <em>Timeout</em> и установите значение 120 секунд.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+
+<ol>
+    <li>Запустите выполнение процесса кнопкой <em>Execute Workflow</em> в режиме <em>Test</em>.</li>
+    <li>Откройте сервис для отправки POST-запросов (например, Postman или расширение для браузера), вставьте туда ваш <em>Test URL</em> и отправьте JSON: {"user_query": "Привет, как дела?"}.</li>
+    <li>Вернитесь в интерфейс n8n и проверьте визуальное отображение данных на линиях связи между нодами: они должны подсвечиваться зеленым цветом.</li>
+    <li>Откройте Google Таблицу и убедитесь, что в соответствующих ячейках появились значения из запроса и ответа нейросети.</li>
+</ol>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_0_2": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>
