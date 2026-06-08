@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 7.2: Установка n8n на бесплатный сервер Railway через визуальный интерфейс</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 7.2. Установка n8n на бесплатный сервер Railway через визуальный интерфейс</h1>
+    
+    <div class="lesson-content">
+<h2>Суть инструмента n8n</h2>
+<p>n8n — это система автоматизации процессов (Workflow Automation Tool) на основе узлов (nodes). Каждый узел представляет собой логический блок, выполняющий конкретное действие: прием данных, их трансформацию или отправку в сторонний сервис через API. Система работает по принципу визуального программирования, где логика выстраивается соединением узлов линиями передачи данных (JSON-объектов).</p>
+<p>В контексте Railway, n8n разворачивается как Docker-контейнер. Это обеспечивает постоянную работу сервера в облаке, что необходимо для обработки Webhook-событий в режиме реального времени. В отличие от локального запуска, облачная версия не зависит от состояния вашего персонального компьютера.</p>
+
+<h2>Интерфейс и логика настройки</h2>
+<p>Для корректной работы системы необходимо понимать назначение следующих функциональных областей:</p>
+<ul>
+    <li><strong>Workflow Editor (Рабочая область):</strong> Основное поле для построения схемы. Содержит ноды (узлы), которые соединяются коннекторами. Данные проходят через них последовательно.</li>
+    <li><strong>Webhook Node (Нода приема данных):</strong> Ключевой элемент для запуска автоматизации. Она создает уникальный URL, который принимает POST или GET запросы из внешних источников. Поля <strong>Test URL</strong> и <strong>Production URL</strong> должны различаться: первый используется для настройки, второй — для эксплуатации.</li>
+    <li><strong>Execution Menu (Мониторинг):</strong> Вкладка, расположенная в левой панели интерфейса. Здесь фиксируются все запуски (executions). Статус <strong>Success</strong> означает успешное выполнение, <strong>Failed</strong> — наличие ошибки в логике или сетевом соединении.</li>
+    <li><strong>Settings -> Environment Variables (Railway):</strong> Внешнее меню управления параметрами сервера. Здесь задаются переменные окружения, такие как <strong>N8N_ENCRYPTION_KEY</strong> или <strong>WEBHOOK_URL</strong>. Любое изменение переменных приводит к автоматическому перезапуску контейнера (Redeploy).</li>
+    <li><strong>Credentials (Управление доступом):</strong> Меню в левом нижнем углу. Используется для хранения API-ключей и токенов авторизации сторонних сервисов. Это исключает хранение паролей внутри самих нод.</li>
+    <li><strong>Activate Button:</strong> Переключатель в правом верхнем углу интерфейса. Активация переводит процесс из режима редактирования в рабочий режим, позволяя вебхукам принимать входящие сигналы в фоновом режиме сервера.</li>
+</ul>
+
+<h2>Пошаговая инструкция по деплою и интеграции</h2>
+<ul>
+    <li><strong>Создание проекта:</strong> В панели управления Railway нажмите кнопку <strong>+ New Project</strong>, выберите <strong>Deploy from GitHub repo</strong>. Укажите официальный репозиторий n8n.</li>
+    <li><strong>Настройка домена:</strong> Перейдите во вкладку <strong>Settings</strong> вашего нового сервиса. В блоке <strong>Domains</strong> нажмите <strong>Generate Domain</strong>. Скопируйте полученный адрес (например, <em>n8n-app.up.railway.app</em>).</li>
+    <li><strong>Переменные среды:</strong> Перейдите в раздел <strong>Variables</strong>. Нажмите <strong>+ New Variable</strong>. Добавьте ключ <code>WEBHOOK_URL</code> со значением <code>https://[ВАШ_ДОМЕН_РАЙЛВЕЙ]/</code>. Нажмите <strong>Add</strong>. Дождитесь завершения процесса пересборки (статус <strong>Deploying</strong> сменится на <strong>Success</strong>).</li>
+    <li><strong>Обновление Workflow:</strong> Откройте интерфейс n8n по вашему новому адресу. Откройте нужный Workflow. Кликните по ноде <strong>Webhook</strong>. В поле <strong>Webhook URLs</strong> убедитесь, что адрес теперь соответствует вашему домену Railway.</li>
+    <li><strong>Активация:</strong> Переключите тумблер <strong>Active</strong> в положение <strong>ON</strong> в правом верхнем углу экрана.</li>
+</ul>
+
+<h2>Типовые ошибки и их устранение</h2>
+<ul>
+    <li><strong>Ошибка "Webhook URL Mismatch":</strong> Возникает, когда в ноде Webhook прописан локальный адрес (localhost), а сервер работает в облаке. <strong>Решение:</strong> Убедитесь, что в настройках ноды выбрано значение "Production" и оно соответствует домену Railway.</li>
+    <li><strong>Ошибка "Execution Failed - Timeout":</strong> Сервер Railway перешел в "спящий режим" (Inactivity) из-за отсутствия активности или нехватки памяти. <strong>Решение:</strong> Зайдите в панель Railway, вкладка <strong>Metrics</strong>. Если потребление RAM близко к пределу, увеличьте лимиты в настройках сервиса или перезапустите контейнер (кнопка <strong>Deploy -> Redploy</strong>).</li>
+    <li><strong>Ошибка "404 Not Found" при запросе к Webhook:</strong> Вы отправили запрос на старый домен или забыли сохранить изменения в ноде Webhook после деплоя. <strong>Решение:</strong> Переоткройте Workflow, убедитесь, что изменения сохранены (кнопка <strong>Save</strong> в верхнем углу), и повторно активируйте тумблер <strong>Active</strong>.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ul>
+    <li>Создайте в n8n пустой Workflow с двумя нодами: <strong>Webhook</strong> (метод POST) и <strong>Wait</strong> (на 5 секунд).</li>
+    <li>Опубликуйте Workflow и получите уникальный Production URL.</li>
+    <li>Отправьте тестовый POST-запрос на этот URL через любой сервис тестирования (например, Postman или curl-онлайн инструменты).</li>
+    <li>Откройте вкладку <strong>Executions</strong> в n8n и добейтесь статуса <strong>Success</strong>.</li>
+    <li>Сделайте скриншот, на котором отчетливо видно, что в поле <strong>URL</strong> ноды Webhook отображается именно ваш домен Railway, а не локальный адрес.</li>
+</ul>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_7_2": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

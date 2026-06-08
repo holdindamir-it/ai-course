@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 4.3: Промпты для бизнеса: обработка заявок, ответы, классификация данных</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 4.3. Промпты для бизнеса: обработка заявок, ответы, классификация данных</h1>
+    
+    <div class="lesson-content">
+<h2>1. Суть инструмента: обработка текстовых данных через LLM</h2>
+<p>Инструмент "Промпт" — это набор инструкций, который передается нейросетевой модели для обработки входного текста. В контексте автоматизации это работает как фильтр: на вход ноды подается неструктурированный текст (например, сообщение пользователя), а на выход подается структурированный ответ, соответствующий заданным правилам (JSON, число, конкретная фраза).</p>
+<p>В n8n модель выступает в роли обработчика, который анализирует содержание сообщения, выполняет логические проверки (если-то) и преобразует данные в формат, пригодный для записи в ячейки Google Sheets. Это позволяет автоматизировать классификацию заявок без написания сложного программного кода.</p>
+
+<h2>2. Разбор интерфейса и логики ноды</h2>
+<ul>
+    <li><strong>Нода AI Agent (в связке с OpenAI Chat Model):</strong> Основной узел для взаимодействия. В поле <strong>System Message</strong> задается поведение модели. Это критическая зона: всё, что здесь написано, является "законом" для обработки входящего потока данных.</li>
+    <li><strong>Поле Input:</strong> Сюда через механизм <strong>Expression</strong> передается переменная из предыдущих нод (например, текст из входящего email или сообщения в Telegram). Иконка шестеренки или "плюс" рядом с полем позволяет выбрать объект <code>{{ $json.message }}</code>.</li>
+    <li><strong>Output Parser (Парсер вывода):</strong> Нода, которая преобразует "сырой" ответ нейросети в формат, понятный для последующей передачи в Google Sheets. При работе с классификацией данных рекомендуется выбирать формат <strong>Structured Output</strong>, где вы задаете схему данных (имя поля и тип данных — String, Number).</li>
+    <li><strong>Меню "Prompt Options":</strong> Находится внутри настроек ноды модели. Параметр <strong>Temperature</strong> определяет "креативность". Для обработки заявок и классификации установите значение <strong>0</strong>. Это заставит модель давать предсказуемые и строго логические ответы без "фантазий".</li>
+    <li><strong>Mapping (Сопоставление):</strong> После выполнения ноды AI, в ноде Google Sheets в поле <strong>Columns to Send</strong> необходимо выбрать выходную переменную из ноды AI. Это связывает результат обработки текста с конкретной колонкой таблицы.</li>
+</ul>
+
+<h2>1. Пошаговая инструкция настройки</h2>
+<ul>
+    <li>Откройте редактор n8n и добавьте ноду <strong>AI Agent с подключенной под-нодой OpenAI Chat Model</strong>.</li>
+    <li>В поле <strong>System Message</strong> введите: "Ты — классификатор заказов. Если в тексте есть число, извлеки его. Если число > 5000, верни строку 'БОЛЬШОЙ ЗАКАЗ'. Если числа нет, верни '0'".</li>
+    <li>В поле <strong>Prompt</strong> нажмите на иконку с плюсом и выберите <code>$json.body</code> (текст сообщения от пользователя).</li>
+    <li>Нажмите <strong>Execute Node</strong> для теста. В блоке <strong>Output</strong> вы увидите результат работы вашей инструкции.</li>
+    <li>Добавьте ноду <strong>Google Sheets</strong>, выберите действие <strong>Append</strong>.</li>
+    <li>В поле <strong>Columns to Send</strong> нажмите <strong>Add Field</strong>, введите имя столбца, а в поле значения выберите через выражение (Expression) результат работы ноды AI Agent (используйте прямую ссылку на поле <code>{{ $json.output }}</code>).</li>
+</ul>
+
+<h2>2. Почему это ломается: типичные ошибки</h2>
+<ul>
+    <li><strong>Несоответствие типов данных:</strong> Модель может вернуть строку "5000", а Google Sheets ожидает число. <strong>Решение:</strong> В настройках ноды Google Sheets проверьте тип данных колонки или используйте выражение <code>{{ parseInt($json.output) }}</code> для принудительного приведения к числу.</li>
+    <li><strong>"Галлюцинации" модели:</strong> При температуре выше 0 модель может добавить лишний текст (например, "Конечно, вот ваш результат: 6000"). <strong>Решение:</strong> Установите <strong>Temperature</strong> строго в 0 и в <strong>System Message</strong> добавьте: "Отвечай только результатом, без дополнительных слов".</li>
+    <li><strong>Пустой ввод (Empty Input):</strong> Если пользователь прислал эмодзи или пустое сообщение, модель может вернуть ошибку или null. <strong>Решение:</strong> В настройках ноды AI активируйте опцию <strong>Continue On Fail</strong> или используйте ноду <strong>If</strong> до AI-обработки, чтобы отсеивать пустые сообщения.</li>
+</ul>
+
+<h2>3. Практическое задание</h2>
+<ol>
+    <li>Создайте в n8n связку: <strong>Webhook</strong> -> <strong>AI Agent</strong> -> <strong>Google Sheets</strong>.</li>
+    <li>Настройте <strong>System Message</strong> так, чтобы модель классифицировала текст на два типа: "Вопрос" (если есть знак вопроса) и "Заказ" (если есть число).</li>
+    <li>В <strong>Google Sheets</strong> выведите результат классификации в одну колонку, а само число (или 0) — в соседнюю.</li>
+    <li>Отправьте через <strong>Webhook</strong> три сообщения: "Привет?", "Куплю 100", "Просто текст". Убедитесь, что в таблице появились соответствующие категории.</li>
+</ol>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_4_3": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

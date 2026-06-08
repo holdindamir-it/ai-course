@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 5.3: Автоматическая обработка входящих сообщений с помощью GPT</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 5.3. Автоматическая обработка входящих сообщений с помощью GPT</h1>
+    
+    <div class="lesson-content">
+<h2>Суть интеграции ИИ и n8n</h2>
+<p>В современной архитектуре Advanced AI в n8n версии 2026 года интеграция ИИ-моделей работает через ноду <strong>AI Agent</strong> в связке с под-нодой модели (например, <strong>OpenAI Chat Model</strong>). AI Agent принимает динамический запрос (Webhook), обрабатывает его согласно заложенным инструкциям, и отдает результат.</p>
+<p>Важнейшее улучшение современной платформы — это уход от сложного ручного разбора JSON-ответов от API. Если раньше приходилось писать длинные формулы вроде <code>choices[0].message.content</code>, то теперь нода AI Agent отдает готовый очищенный текст напрямую в свойство <strong>output</strong>. Для извлечения строго структурированных данных (например, JSON с четкими полями) используется под-нода <strong>Structured Output Parser</strong>, которая подключается напрямую к порту Output Parser ноды AI Agent.</p>
+
+<h3>Интерфейс и логика настройки AI-цепочки</h3>
+<ul>
+    <li><strong>AI Agent:</strong> Главная управляющая нода. In поле <strong>Prompt / Input Text</strong> указывается динамический промпт, а в <strong>System Message</strong> задаются правила игры для агента.</li>
+    <li><strong>OpenAI Chat Model:</strong> Подключается к порту Model. В ней выбирается Credential и конкретная модель (например, <code>gpt-4o-mini</code>).</li>
+    <li><strong>Structured Output Parser:</strong> Современная под-нода, которая подключается к порту Output Parser ноды AI Agent. В ней вы визуально или через JSON-схему описываете структуру данных, которую хотите получить от ИИ (например, поля <code>summary</code>, <code>sentiment</code>). ИИ гарантированно вернет JSON строго в таком формате.</li>
+</ul>
+
+<h3>Контроль данных через интерфейс Execution Data</h3>
+<p>После каждого запуска (кнопка <strong>Execute Workflow</strong>) n8n фиксирует результат в панели <em>Execution Data</em>. Вкладка <strong>Output</strong> отображает дерево JSON-структуры. В современном n8n ответ ИИ находится в корневом поле <code>output</code>. Если вы использовали Structured Output Parser, то в поле <code>output</code> будет лежать уже распарсенный готовый объект с вашими свойствами, готовый к немедленному использованию в последующих нодах без какого-либо дополнительного кода.</p>
+
+<h3>Пошаговая настройка узла обработки</h3>
+<ul>
+    <li>Откройте редактор сценария. В вашей цепочке после Webhook должна идти нода <strong>AI Agent</strong> с подключенной к ней под-нодой <strong>OpenAI Chat Model</strong>.</li>
+    <li>Добавьте ноду <strong>Edit Fields (Set)</strong> на рабочее поле, соединив выход ноды AI Agent с её входом.</li>
+    <li>Нажмите на ноду <strong>Edit Fields (Set)</strong>. В открывшейся панели выберите кнопку <strong>Add Field</strong>, затем выберите тип <strong>String</strong>.</li>
+    <li>В поле <strong>Name</strong> введите <code>result</code>.</li>
+    <li>В поле <strong>Value</strong> нажмите на иконку шестеренки и выберите пункт <strong>Add Expression</strong>.</li>
+    <li>В открывшемся редакторе выражений выберите ноду <strong>AI Agent</strong> и просто кликните на поле <code>output</code>. Убедитесь, что в поле выражения появилась лаконичная и современная строка: <code>{{ $json.output }}</code>.</li>
+    <li>Нажмите кнопку <strong>Save</strong> в нижней части панели.</li>
+</ul>
+
+<h3>Технические причины сбоев и их устранение</h3>
+<ul>
+    <li><strong>Ошибка разбора структуры:</strong> Возникает при попытке использовать устаревший синтаксис <code>choices[0].message.content</code> с новыми нодами Advanced AI. <strong>Решение:</strong> Используйте прямое поле <code>{{ $json.output }}</code>, так как современные ИИ-ноды берут всю рутину парсинга на себя.</li>
+    <li><strong>Отклонение от схемы (Parser Error):</strong> ИИ не смог упаковать ответ в заданную схему Structured Output Parser. <strong>Решение:</strong> Упростите требования в схеме парсера или слегка поднимите температуру модели в настройках OpenAI Chat Model до 0.2.</li>
+    <li><strong>Пустой результат (Null):</strong> Возникает, если в ноде Webhook не переданы данные, на которые настроена нода AI Agent. <strong>Решение:</strong> Проверьте вкладку <em>Input</em> в ноде AI Agent. Если она пуста, значит Webhook не принял данные. Проведите тестовый запрос из Postman еще раз.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+<p>Для закрепления материала выполните следующие действия:</p>
+<ul>
+    <li>Создайте цепочку: Webhook -> AI Agent (с подключенной OpenAI Chat Model и под-нодой Structured Output Parser) -> Edit Fields (Set) -> Respond to Webhook.</li>
+    <li>В под-ноде <strong>Structured Output Parser</strong> настройте схему с двумя текстовыми полями: <code>summary</code> (краткое резюме сообщения) и <code>sentiment</code> (оценка тональности: позитивный/негативный/нейтральный).</li>
+    <li>В ноде <strong>Edit Fields (Set)</strong> настройте извлечение этих полей напрямую из выхода AI Agent: <code>{{ $json.output.summary }}</code> и <code>{{ $json.output.sentiment }}</code>.</li>
+    <li>В ноде <strong>Respond to Webhook</strong> настройте ответ, возвращающий распарсенный JSON-объект.</li>
+    <li>Успешно протестируйте сценарий, отправив отзыв клиента через Postman и получив в ответ идеально структурированный JSON без написания формул и JS-кода.</li>
+</ul>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_5_3": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

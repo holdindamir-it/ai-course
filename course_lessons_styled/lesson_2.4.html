@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 2.4: Google Docs и Google Drive: авто-создание документов по шаблону</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 2.4. Google Docs и Google Drive: авто-создание документов по шаблону</h1>
+    
+    <div class="lesson-content">
+<h2>Суть автоматизации документов через Google API</h2>
+<p>Автоматизация создания документов строится на использовании <strong>шаблона (Template)</strong> — обычного файла Google Docs с внедренными переменными-заполнителями в формате <code>{{имя_переменной}}</code>. При запуске сценария в n8n система инициирует копирование файла-шаблона, после чего подставляет в него данные, полученные из предыдущих этапов (например, из Google Таблиц или формы).</p>
+<p>Технически это происходит через API-запрос к Google Drive (копирование файла) и Google Docs (поиск и замена текста). В n8n этот процесс реализуется цепочкой нод, где данные передаются из одной ячейки в другую в формате JSON-объектов.</p>
+
+<h2>Разбор интерфейса и логики в n8n</h2>
+<p>Для реализации задачи используются следующие элементы интерфейса n8n:</p>
+<ul>
+    <li><strong>Google Drive Node (Resource: File, Operation: Copy):</strong> Используется для дублирования файла-шаблона. В поле <strong>File ID</strong> вставляется идентификатор шаблона из URL (строка символов после <code>/d/</code> и перед <code>/edit</code>).</li>
+    <li><strong>Google Docs Node (Resource: Document, Operation: Update):</strong> Основной инструмент для работы с содержимым. Здесь используется параметр <strong>Replace Text</strong>. В поле <strong>Text to Find</strong> указывается ключ из шаблона (например, <code>{{Date}}</code>), а в поле <strong>Replace With</strong> — значение из данных, полученных в предыдущей ноде.</li>
+    <li><strong>Expression Editor (Редактор выражений):</strong> При нажатии на поле ввода в Google Docs ноде открывается интерфейс выбора переменных. Вы перетаскиваете нужный узел данных (например, <code>{{$json.Date}}</code>) в поле, чтобы n8n динамически подставлял значения в документ.</li>
+    <li><strong>Node Parameters:</strong> Обязательно поле <strong>Document ID</strong> в ноде Google Docs. Оно должно быть динамическим — в него нужно передать ID файла, созданного на предыдущем шаге (нодой Google Drive).</li>
+</ul>
+
+<h3>Ключевые настройки</h3>
+<ul>
+    <li><strong>Credentials:</strong> Общая настройка доступа через Google Service Account или OAuth2, которая связывает ваш аккаунт Google с интерфейсом n8n.</li>
+    <li><strong>JSON Structure:</strong> Данные от нод всегда приходят в виде массива объектов. В редакторе выражений вы всегда выбираете конкретный ключ объекта, который соответствует заголовку вашей таблицы.</li>
+    <li><strong>Mapping:</strong> Процесс сопоставления полей формы с полями в шаблоне документа. Важно, чтобы названия ключей в JSON-структуре совпадали с названиями переменных в тексте документа.</li>
+</ul>
+
+<h2>Пошаговая инструкция настройки</h2>
+<p>Для создания динамического документа выполните следующие действия:</p>
+<ul>
+    <li>Создайте в Google Docs файл-шаблон. В тексте напишите: <code>Дата: {{date}}</code>, <code>Пользователь: {{user}}</code>, <code>Текст: {{message}}</code>. Запомните ID файла из адресной строки браузера.</li>
+    <li>В n8n перетащите ноду <strong>Google Drive</strong>. Выберите ресурс <strong>File</strong> и операцию <strong>Copy</strong>. В поле <strong>File ID</strong> вставьте ID вашего шаблона.</li>
+    <li>Добавьте ноду <strong>Google Docs</strong>. В поле <strong>Document ID</strong> нажмите на иконку шестеренки и выберите <strong>Add Expression</strong>. В списке слева найдите ноду <strong>Google Drive</strong> и выберите параметр <code>id</code> созданного файла.</li>
+    <li>В этой же ноде Google Docs выберите операцию <strong>Update</strong> и параметр <strong>Replace Text</strong>. Добавьте три элемента в список <strong>Replacements</strong>:
+        <ul>
+            <li><strong>Text to Find:</strong> <code>{{date}}</code> | <strong>Replace With:</strong> (перетащите из списка слева поле <code>Date</code>).</li>
+            <li><strong>Text to Find:</strong> <code>{{user}}</code> | <strong>Replace With:</strong> (перетащите из списка слева поле <code>User</code>).</li>
+            <li><strong>Text to Find:</strong> <code>{{message}}</code> | <strong>Replace With:</strong> (перетащите из списка слева поле <code>Message</code>).</li>
+        </ul>
+    </li>
+    <li>Нажмите <strong>Execute Node</strong> для каждой ноды по очереди, чтобы проверить корректность передачи данных.</li>
+</ul>
+
+<h2>Типичные причины сбоев и их устранение</h2>
+<ul>
+    <li><strong>Ошибка "File not found":</strong> Происходит, если ID файла вставлен с ошибкой или у сервисного аккаунта нет прав доступа к файлу. <strong>Решение:</strong> Нажмите "Поделиться" в Google Docs и добавьте Email сервисного аккаунта (из настроек Credentials в n8n) с правами редактора.</li>
+    <li><strong>Неверная переменная в Replace Text:</strong> Если текст в шаблоне написан как <code>{{Date}}</code>, а в ноде указано <code>{{date}}</code> (регистр символов), замена не произойдет. <strong>Решение:</strong> Скопируйте текст прямо из шаблона и вставьте его в поле <strong>Text to Find</strong> в n8n.</li>
+    <li><strong>Отсутствие данных в очереди:</strong> Сценарий запускается, но документ пуст. <strong>Решение:</strong> Убедитесь, что нода, стоящая перед Google Docs, успешно получила данные. Нажмите на ноду Google Drive и проверьте вкладку <strong>Output</strong> — там должны быть данные из Google Таблицы.</li>
+</ul>
+
+<h2>Практическое задание</h2>
+<ol>
+    <li>Создайте папку на Google Drive для хранения авто-документов и в ноде Google Drive в поле <strong>Folder ID</strong> укажите ID этой папки, чтобы документы не сохранялись в корневой директории.</li>
+    <li>Добавьте в цепочку ноду <strong>Google Drive (Share)</strong> после создания документа, чтобы автоматически открывать доступ к созданному файлу по ссылке (настройте параметр <strong>Role</strong> как <code>reader</code>).</li>
+    <li>Запустите сценарий, перейдите в созданную папку на Google Drive и проверьте, что документ создан, текст внутри заменен на данные из таблицы, а доступ к файлу открыт.</li>
+</ol>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_2_4": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>
