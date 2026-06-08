@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 6.3: Email-автоматизация: Gmail / SMTP — парсинг писем и автоответы</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 6.3. Email-автоматизация: Gmail / SMTP — парсинг писем и автоответы</h1>
+    
+    <div class="lesson-content">
+<h2>1. Суть email-автоматизации в n8n</h2>
+<p>Автоматизация почтовых рассылок и обработки входящих сообщений базируется на протоколах IMAP (для получения писем) и SMTP (для отправки). В n8n нода Gmail или стандартная нода IMAP/SMTP выступает как посредник, который циклично опрашивает почтовый сервер на наличие новых сообщений по заданным фильтрам (отправитель, тема, наличие вложений) или инициирует отправку данных из внешних сервисов.</p>
+<p>При получении письма нода преобразует его содержимое из сырого формата (MIME) в JSON-объект. Это позволяет извлекать из письма ключевые параметры: адрес отправителя, тему, тело письма (в текстовом или HTML-формате) и метаданные вложений для последующей передачи в другие сервисы.</p>
+
+<h2>2. Разбор интерфейса и логики нод</h2>
+<p>Для работы с почтой в n8n используются следующие функциональные узлы и настройки:</p>
+<ul>
+    <li><strong>Нода Gmail / IMAP Trigger:</strong> Используется для прослушивания входящих событий. Основные поля настройки:
+        <ul>
+            <li><strong>Credential:</strong> Выбор авторизованного подключения (OAuth2 для Gmail или логин/пароль для SMTP).</li>
+            <li><strong>Resource:</strong> Выбор операции (например, Message для работы с письмами).</li>
+            <li><strong>Operation:</strong> Выбор действия (Get, GetAll, Send).</li>
+            <li><strong>Query:</strong> Поле для ввода параметров поиска (например, <code>is:unread</code> для обработки только непрочитанных писем).</li>
+        </ul>
+    </li>
+    <li><strong>Логика парсинга данных:</strong>
+        <ul>
+            <li>После получения письма данные отображаются в окне <strong>Input/Output</strong>.</li>
+            <li>Для извлечения текста используйте поле <strong>Expression</strong>. Путь к данным в JSON выглядит как <code>{{ $json.snippet }}</code> для краткого содержания или <code>{{ $json.textHtml }}</code> для полного текста письма.</li>
+        </ul>
+    </li>
+    <li><strong>Нода Email (SMTP):</strong> Используется для отправки ответов.
+        <ul>
+            <li><strong>To:</strong> Поле для указания адресата (можно подставить переменную <code>{{ $json.from.address }}</code> из предыдущего шага, чтобы ответить отправителю).</li>
+            <li><strong>Subject:</strong> Тема ответного письма.</li>
+            <li><strong>Text / HTML:</strong> Основное тело сообщения. Здесь допустимо использование переменных n8n для динамической генерации текста на основе данных из входящего письма.</li>
+        </ul>
+    </li>
+</ul>
+
+<h2>1. Пошаговая инструкция по настройке</h2>
+<ul>
+    <li>Нажмите кнопку <strong>Add Node</strong> и выберите <strong>Gmail Trigger</strong>. В поле <strong>Credential</strong> выберите созданное подключение к вашему почтовому аккаунту.</li>
+    <li>В поле <strong>Event</strong> установите значение <strong>Message Received</strong>. В разделе <strong>Options</strong> добавьте фильтр <strong>Label</strong>, указав «INBOX», чтобы считывать только входящие.</li>
+    <li>Добавьте вторую ноду <strong>Gmail</strong> и выберите операцию <strong>Send</strong>.</li>
+    <li>В поле <strong>To</strong> нажмите на иконку шестеренки (<strong>Expression</strong>) и перетащите из панели данных слева поле <code>from</code> -> <code>value</code> из предыдущей ноды Gmail Trigger.</li>
+    <li>В поле <strong>Subject</strong> введите «Автоответ: задача получена».</li>
+    <li>В поле <strong>Text</strong> используйте выражение <code>Здравствуйте, мы получили ваше письмо с темой: {{ $json.subject }}</code>. Нажмите кнопку <strong>Test Step</strong> для отправки пробного письма.</li>
+</ul>
+
+<h2>2. Ошибки и их решение</h2>
+<ul>
+    <li><strong>Ошибка авторизации (401 Unauthorized):</strong> Возникает при истечении срока действия токена. Решение: зайдите в раздел <strong>Credentials</strong> в меню n8n, выберите ваш аккаунт Gmail и нажмите <strong>Reconnect</strong> для обновления прав доступа через браузер.</li>
+    <li><strong>Отсутствие данных в переменных:</strong> Происходит, если структура письма отличается от ожидаемой (например, письмо пустое). Решение: добавьте ноду <strong>If</strong> после триггера, чтобы проверять наличие поля <code>textHtml</code> перед передачей данных в следующую ноду.</li>
+    <li><strong>Зацикливание (Infinite Loop):</strong> Если ваш автоответ вызывает новый триггер (например, вы настроили пересылку). Решение: добавьте фильтр в Gmail Trigger <strong>Query</strong>: <code>-from:ваш-email@gmail.com</code>, чтобы исключить собственные исходящие письма из обработки.</li>
+</ul>
+
+<h2>3. Практическое задание</h2>
+<ul>
+    <li>Настройте цепочку: Gmail Trigger -> Использовать ноду <strong>Set</strong> (для фильтрации темы письма) -> Gmail Send.</li>
+    <li>В ноде <strong>Set</strong> создайте переменную «TaskStatus» со значением «In Progress».</li>
+    <li>Настройте отправку письма-подтверждения, в теле которого будет написано: «Статус вашего запроса: {{ $json.TaskStatus }}».</li>
+    <li>Отправьте письмо на свой ящик с любого другого адреса. Убедитесь, что в полученном ответе статус отображается корректно.</li>
+    <li>В интерфейсе n8n перейдите во вкладку <strong>Executions</strong> и проверьте логи выполнения, чтобы убедиться, что ошибки (красные индикаторы) отсутствуют.</li>
+</ul>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_6_3": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

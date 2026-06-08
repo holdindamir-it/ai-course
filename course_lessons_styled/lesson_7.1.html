@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урок 7.1: Варианты деплоя n8n: обзор облака n8n и Railway</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 30px; color: #3c4043; line-height: 1.7; }
+        .lesson-container { max-width: 900px; margin: 0 auto; background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        a.back-link { color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; margin-bottom: 25px; }
+        a.back-link:hover { text-decoration: underline; }
+        
+        h1 { color: #1a73e8; font-size: 34px; margin-top: 0; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; color: #5f6368; margin-bottom: 40px; }
+        h2 { color: #202124; font-size: 26px; margin-top: 40px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; }
+        h3 { color: #202124; font-size: 20px; margin-top: 30px; }
+        p, li { font-size: 18px; color: #3c4043; }
+        ul, ol { padding-left: 25px; margin-bottom: 20px; }
+        
+        .highlight-box { background: #e8f0fe; padding: 25px; border-radius: 8px; border-left: 5px solid #1a73e8; margin: 30px 0; }
+        .highlight-box h4 { margin: 0 0 10px 0; color: #1967d2; font-size: 20px; }
+        .highlight-box p { margin: 0; color: #202124; }
+
+        .btn-complete { display: block; width: 100%; padding: 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; margin-top: 50px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); }
+        .btn-complete:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+
+<div class="lesson-container">
+    <a href="../dashboard.html" class="back-link">← Вернуться в личный кабинет</a>
+    
+    <h1>Урок 7.1. Варианты деплоя n8n: обзор облака n8n и Railway</h1>
+    
+    <div class="lesson-content">
+<h2>Развертывание n8n: Облачный сервис vs Railway</h2>
+
+<p><strong>n8n Cloud (SaaS):</strong> Это управляемая инфраструктура от разработчиков платформы. Вы получаете готовый экземпляр n8n, где техническое обслуживание, обновление версий и обеспечение отказоустойчивости берет на себя провайдер. Доступ осуществляется через авторизованный URL, предоставленный при регистрации.</p>
+
+<p><strong>Railway (PaaS):</strong> Это облачная платформа для деплоя контейнеризированных приложений. В отличие от n8n Cloud, вы разворачиваете инстанс n8n самостоятельно. Это дает полный контроль над переменными окружения (Environment Variables), версией движка и базой данных, но требует ручной настройки лимитов памяти и портов.</p>
+
+<h3>Интерфейс и логика развертывания</h3>
+
+<ul>
+    <li><strong>n8n Cloud:</strong> Управление осуществляется через личный кабинет на сайте n8n. Основная настройка — это раздел <strong>Settings</strong>, где задаются ключи API для внешних сервисов и производится управление учетными записями пользователей (User Management). Обновление версии происходит автоматически по нажатию кнопки <strong>Upgrade</strong> в интерфейсе панели управления.</li>
+    <li><strong>Railway Dashboard:</strong> Работа строится на создании проекта (кнопка <strong>+ New Project</strong> -> <strong>Deploy from Template</strong>). Для n8n используется шаблон, который автоматически создает Service.
+    <ul>
+        <li><strong>Variables:</strong> Вкладка, где прописываются критические параметры: <code>N8N_ENCRYPTION_KEY</code> (для шифрования данных), <code>DATABASE_URL</code> (для внешней базы данных) и <code>WEBHOOK_URL</code> (для корректной работы входящих триггеров).</li>
+        <li><strong>Deployments:</strong> Журнал развертывания. Отображает статус сборки (Build) и запуска (Runtime). Если статус «Active», система готова к приему трафика.</li>
+        <li><strong>Settings (Domain):</strong> Раздел, где генерируется публичный URL. В поле <strong>Custom Domain</strong> задается адрес, по которому будет доступен ваш экземпляр n8n.</li>
+    </ul>
+    </li>
+    <li><strong>Синхронизация данных:</strong> При смене способа деплоя (перенос с n8n Cloud на Railway) используется функция <strong>Export Workflow</strong> (файл .json), который импортируется через интерфейс <strong>Workflow Editor</strong> в новом инстансе с помощью кнопки <strong>Import from File</strong>.</li>
+</ul>
+
+<h2>Пошаговая инструкция: Деплой n8n в Railway</h2>
+
+<p>Для развертывания инстанса выполните следующие действия в панели управления Railway:</p>
+<ul>
+    <li>Нажмите кнопку <strong>+ New Project</strong>, затем выберите <strong>Deploy from Template</strong>.</li>
+    <li>В строке поиска введите <strong>n8n</strong> и выберите официальный шаблон.</li>
+    <li>После завершения сборки перейдите на вкладку <strong>Settings</strong> вашего нового сервиса.</li>
+    <li>Найдите раздел <strong>Domains</strong> и нажмите <strong>Generate Domain</strong> — это адрес вашего сервера.</li>
+    <li>Перейдите на вкладку <strong>Variables</strong>. Добавьте переменную <code>N8N_PORT</code> со значением <code>5678</code> и <code>N8N_PROTOCOL</code> со значением <code>https</code>.</li>
+    <li>Нажмите кнопку <strong>Deploy</strong> (или дождитесь автоматического перезапуска), чтобы применить изменения.</li>
+    <li>Перейдите по сгенерированной ссылке в браузере, чтобы открыть интерфейс n8n.</li>
+</ul>
+
+<h3>Типичные ошибки при деплое</h3>
+
+<ul>
+    <li><strong>Ошибка 404 или Connection Refused:</strong> Причина — неверный порт. Решение: проверьте на вкладке <strong>Settings -> Networking</strong> в Railway, что порт в настройках контейнера совпадает со значением <code>N8N_PORT</code> в переменных окружения.</li>
+    <li><strong>Ошибка "Webhook URL not set":</strong> Причина — n8n не знает свой внешний адрес. Решение: в настройках Railway добавьте переменную <code>WEBHOOK_URL</code> и вставьте туда полный адрес вашего домена, сгенерированного на этапе настройки.</li>
+    <li><strong>Сброс рабочих процессов после перезагрузки:</strong> Причина — использование внутренней SQLite базы данных в эфемерном контейнере. Решение: на вкладке <strong>Volumes</strong> в Railway добавьте новый Volume, примонтируйте его к директории <code>/home/node/.n8n</code>.</li>
+</ul>
+
+<h3>Практическое задание</h3>
+
+<ul>
+    <li>Создайте проект n8n в Railway по инструкции выше.</li>
+    <li>Сгенерируйте токен доступа (через меню <strong>Settings -> API Keys</strong> внутри вашего инстанса n8n).</li>
+    <li>Импортируйте любой существующий рабочий процесс (Workflow) из предыдущего урока в облачную версию n8n через кнопку <strong>Import from File</strong>.</li>
+    <li>В настройках ноды <strong>Webhook</strong> измените значение поля <strong>Webhook URLs</strong> (Production) на новый URL, полученный после деплоя в Railway.</li>
+    <li>Нажмите <strong>Activate</strong> в верхнем правом углу, чтобы запустить процесс в облаке.</li>
+    <li>Сделайте скриншот вкладки <strong>Execution</strong>, подтверждающий, что событие было обработано именно на домене, который вы создали в Railway.</li>
+</ul>
+    </div>
+
+<div class="highlight-box" style="background: #f8f9fa; border-left: 5px solid #34a853; margin-top: 40px;">
+    <h4>🛠️ Шпаргалка AI-Интегратора (Полезные коды для n8n):</h4>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px;">
+        <tr style="background: #dae7ff;">
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Задача</th>
+            <th style="padding: 10px; border: 1px solid #dadce0; text-align: left;">Код / Выражение для n8n</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Время в твоем регионе</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $now.setZone('Europe/Kyiv').toFormat('dd.MM.yyyy HH:mm') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Очистка телефона</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.phone.replace(/[^0-9+]/g, '') }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Если пусто в тексте</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text ? $json.text : "Не указано" }}</code></td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><b>Вытащить Email</b></td>
+            <td style="padding: 10px; border: 1px solid #dadce0;"><code>{{ $json.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}/)[0] }}</code></td>
+        </tr>
+    </table>
+</div>
+
+    <button class="btn-complete" id="btn-complete">Завершить урок и сохранить прогресс</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            console.log("Авторизация подтверждена в уроке:", user.email);
+        } else {
+            console.log("Сессия не найдена, редирект на index.html");
+            window.location.href = "../index.html";
+        }
+    });
+
+    document.getElementById('btn-complete').addEventListener('click', async () => {
+        console.log("Кнопка нажата!");
+        
+        if (!currentUserId) {
+            alert("Ошибка: Сессия Firebase еще не подгрузилась. Подождите секунду.");
+            return;
+        }
+
+        try {
+            const docRef = doc(db, "users", currentUserId);
+            
+            const progressUpdate = {
+                "lesson_7_1": true
+            };
+
+            await setDoc(docRef, progressUpdate, { merge: true });
+            console.log("Документ успешно перезаписан в Firestore!");
+            
+            window.location.href = "../dashboard.html";
+            
+        } catch (error) {
+            console.error("Ошибка при сохранении прогресса:", error);
+            alert("Не удалось сохранить прогресс: " + error.message);
+        }
+    });
+</script>
+
+</body>
+</html>

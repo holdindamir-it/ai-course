@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель обучения: AI-Автоматизация</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f4f6f9; margin: 0; padding: 20px; color: #3c4043; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        
+        /* Шапка профиля */
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f3f4; padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { color: #1a73e8; margin: 0; font-size: 32px; }
+        .user-info { font-size: 16px; color: #5f6368; text-align: right; }
+        .btn-logout { background: none; border: none; color: #d93025; text-decoration: underline; cursor: pointer; font-size: 16px; padding: 0; margin-top: 5px; }
+
+        /* Прогресс-бар */
+        .progress-section { background: #e8f0fe; padding: 20px; border-radius: 8px; margin-bottom: 35px; }
+        .progress-title { font-size: 18px; font-weight: bold; color: #1967d2; margin-bottom: 10px; }
+        .progress-bar-container { background: #dae7ff; border-radius: 10px; height: 20px; width: 100%; overflow: hidden; }
+        .progress-bar { background: #1a73e8; height: 100%; width: 0%; transition: width 0.5s ease-out; }
+        .progress-text { font-size: 14px; color: #5f6368; margin-top: 8px; font-weight: bold; }
+
+        /* Списки модулей и уроков */
+        .module-card { border: 1px solid #dadce0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+        .module-title { background: #f8f9fa; padding: 18px; font-size: 20px; font-weight: bold; color: #202124; border-bottom: 1px solid #dadce0; }
+        .lessons-list { list-style: none; padding: 0; margin: 0; }
+        .lesson-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f1f3f4; transition: background 0.2s; }
+        .lesson-item:last-child { border-bottom: none; }
+        .lesson-item:hover { background: #f8f9fa; }
+        
+        .lesson-link { font-size: 18px; color: #1a73e8; text-decoration: none; font-weight: 500; }
+        .lesson-link:hover { text-decoration: underline; }
+        
+        /* Кастомный чекбокс */
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        .status-done { background: #e6f4ea; color: #137333; }
+        .status-not-done { background: #f1f3f4; color: #5f6368; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>Обучение AI-Автоматизации</h1>
+            <div style="color: #5f6368; margin-top: 5px; font-size: 16px;">Личный кабинет студента</div>
+        </div>
+        <div class="user-info">
+            <span id="user-email">Загрузка...</span><br>
+            <button class="btn-logout" id="btn-logout">Выйти из системы</button>
+        </div>
+    </div>
+
+    <div class="progress-section">
+        <div class="progress-title">Ваш общий прогресс обучения:</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-text" id="progress-text">Загрузка прогресса...</div>
+    </div>
+
+    <div id="modules-container"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0l3Ko-wm3DhDRu2oFk6fxpv-IYLieTjI",
+        authDomain: "dadbd-b404c.firebaseapp.com",
+        projectId: "dadbd-b404c",
+        storageBucket: "dadbd-b404c.firebasestorage.app",
+        messagingSenderId: "759709621277",
+        appId: "1:759709621277:web:8d1dd7012dc54377a57af4",
+        measurementId: "G-BC989QFLTE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Массив всех 52 уроков
+    const LESSONS = [
+        {"id": "0.1", "title": "Кто такой специалист по AI-автоматизации (технический обзор)"},
+        {"id": "0.2", "title": "Инструменты, которые мы установим, и результат"},
+        {"id": "0.3", "title": "Регистрация и первый запуск n8n (облако бесплатно)"},
+        {"id": "0.4", "title": "Как читать схемы автоматизации: «ноды», «триггеры» и «потоки данных»"},
+        {"id": "1.1", "title": "Интерфейс n8n: что где находится и зачем"},
+        {"id": "1.2", "title": "Первый workflow: автоматическая отправка письма по расписанию"},
+        {"id": "1.3", "title": "Нода HTTP Request: как «разговаривать» с любым сервисом в интернете"},
+        {"id": "1.4", "title": "Условия и фильтры (нода IF): делаем автоматизацию «умной»"},
+        {"id": "1.5", "title": "Циклы и массивы (нода Loop / Split in Batches)"},
+        {"id": "1.6", "title": "Работа с данными: трансформация, форматирование, функция Set"},
+        {"id": "1.7", "title": "Отладка и поиск ошибок: как читать красные ноды"},
+        {"id": "2.1", "title": "Подключение Google-аккаунта к n8n (OAuth, сервисные ключи)"},
+        {"id": "2.2", "title": "Google Sheets: читаем, пишем, обновляем строки автоматически"},
+        {"id": "2.3", "title": "Google Forms -> Google Sheets -> уведомление: полная связка"},
+        {"id": "2.4", "title": "Google Docs и Google Drive: авто-создание документов по шаблону"},
+        {"id": "2.5", "title": "Проект: CRM-минимум в Google Таблицах с автозаполнением"},
+        {"id": "3.1", "title": "Создание Telegram-бота через BotFather: пошагово за 10 минут"},
+        {"id": "3.2", "title": "Подключение бота к n8n: Webhook и Polling — в чём разница"},
+        {"id": "3.3", "title": "Бот-информатор: автоматические уведомления о событиях"},
+        {"id": "3.4", "title": "Бот с кнопками (Inline Keyboard): меню, выбор, ветвление диалога"},
+        {"id": "3.5", "title": "Бот, который пишет в Google Таблицу: сбор данных через чат"},
+        {"id": "3.6", "title": "Проект: Telegram-бот для записи клиентов (имя -> дата -> таблица)"},
+        {"id": "4.1", "title": "Что такое промпт и почему «напиши текст» — плохой промпт"},
+        {"id": "4.2", "title": "Структура идеального промпта: роль, задача, контекст, формат, ограничения"},
+        {"id": "4.3", "title": "Промпты для бизнеса: обработка заявок, ответы, классификация данных"},
+        {"id": "4.4", "title": "Системные промпты: создаём «персонажа» для корпоративного бота"},
+        {"id": "4.5", "title": "Цепочки промптов (Chain of Thought): когда одного запроса недостаточно"},
+        {"id": "4.6", "title": "Галлюцинации и нестабильность ИИ: как их контролировать"},
+        {"id": "4.7", "title": "Библиотека готовых промптов: разбор структуры"},
+        {"id": "5.1", "title": "Подключение OpenAI к n8n: получаем API-ключ, делаем первый запрос"},
+        {"id": "5.2", "title": "Нода OpenAI в n8n: Chat, Completion, Embeddings — что выбрать"},
+        {"id": "5.3", "title": "Автоматическая обработка входящих сообщений с помощью GPT"},
+        {"id": "5.4", "title": "Классификация и маршрутизация: ИИ решает, куда направить данные"},
+        {"id": "5.5", "title": "Генерация документов и ответов по шаблону с помощью OpenAI"},
+        {"id": "5.6", "title": "Альтернативы OpenAI: Mistral, Claude API, Gemini (через HTTP Request)"},
+        {"id": "5.7", "title": "Проект: «Умный секретарь» (бот читает вопрос, GPT отвечает)"},
+        {"id": "5.8", "title": "Работа с аудио: подключение Whisper API для распознавания голосовых сообщений"},
+        {"id": "6.1", "title": "Airtable как база данных для автоматизации: подключение и работа"},
+        {"id": "6.2", "title": "Notion + n8n: автоматическое ведение задач и баз знаний"},
+        {"id": "6.3", "title": "Email-автоматизация: Gmail / SMTP — парсинг писем и автоответы"},
+        {"id": "6.4", "title": "Webhook-интеграции: как принимать данные от любого сервиса"},
+        {"id": "6.5", "title": "Работа с файлами: загрузка, чтение PDF, отправка в облако"},
+        {"id": "6.6", "title": "Проект: полная воронка (сайт -> GPT-квалификация -> CRM -> уведомление)"},
+        {"id": "6.7", "title": "Интеграция n8n с Firebase Firestore через HTTP REST API"},
+        {"id": "6.8", "title": "Разработка State Machine: сохранение шагов диалога Telegram-бота в базу"},
+        {"id": "7.1", "title": "Варианты деплоя n8n: обзор облака n8n и Railway"},
+        {"id": "7.2", "title": "Установка n8n на бесплатный сервер Railway через визуальный интерфейс"},
+        {"id": "7.3", "title": "Домены и Webhook-URL в Railway для production-бота"},
+        {"id": "7.4", "title": "Мониторинг и восстановление: что делать, если бот завис"},
+        {"id": "7.5", "title": "Экспорт workflow и техническая документация проекта"}
+    ];
+
+    // Названия модулей
+    const MODULE_NAMES = {
+        "0": "Модуль 0: Введение в AI-автоматизацию",
+        "1": "Модуль 1: Основы n8n и базовая логика",
+        "2": "Модуль 2: Работа с Google-экосистемой",
+        "3": "Модуль 3: Разработка Telegram-ботов",
+        "4": "Модуль 4: Продвинутый Промпт-инжиниринг",
+        "5": "Модуль 5: Интеграция ИИ (OpenAI / Gemini)",
+        "6": "Модуль 6: Базы данных и Webhooks",
+        "7": "Модуль 7: Деплой и мониторинг серверов"
+    };
+
+    // Отрисовка списка уроков
+    function renderModules() {
+        const container = document.getElementById('modules-container');
+        container.innerHTML = '';
+
+        const grouped = {};
+        LESSONS.forEach(lesson => {
+            const modId = lesson.id.split('.')[0];
+            if (!grouped[modId]) grouped[modId] = [];
+            grouped[modId].push(lesson);
+        });
+
+        Object.keys(grouped).sort().forEach(modId => {
+            const card = document.createElement('div');
+            card.className = 'module-card';
+
+            const title = document.createElement('div');
+            title.className = 'module-title';
+            title.innerText = MODULE_NAMES[modId] || `Модуль ${modId}`;
+            card.appendChild(title);
+
+            const list = document.createElement('ul');
+            list.className = 'lessons-list';
+
+            grouped[modId].forEach(lesson => {
+                const item = document.createElement('li');
+                item.className = 'lesson-item';
+                
+                const safeId = lesson.id.replace('.', '_');
+
+                item.innerHTML = `
+                    <a href="course_lessons_styled/lesson_${lesson.id}.html" class="lesson-link">Урок ${lesson.id}. ${lesson.title}</a>
+                    <span class="status-badge status-not-done" id="status-${safeId}">Не пройден</span>
+                `;
+                list.appendChild(item);
+            });
+
+            card.appendChild(list);
+            container.appendChild(card);
+        });
+    }
+
+    // Проверка авторизации
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = "index.html"; 
+        } else {
+            document.getElementById('user-email').innerText = user.email;
+            renderModules();
+            await loadUserProgress(user.uid); 
+        }
+    });
+
+    // Загрузка прогресса из Firestore
+    async function loadUserProgress(uid) {
+        try {
+            const docRef = doc(db, "users", uid);
+            const docSnap = await getDoc(docRef);
+            
+            let completedCount = 0;
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                
+                LESSONS.forEach(lesson => {
+                    const safeId = lesson.id.replace('.', '_');
+                    const fieldName = `lesson_${safeId}`;
+
+                    if (data[fieldName] === true) {
+                        completedCount++;
+                        const badge = document.getElementById(`status-${safeId}`);
+                        if (badge) {
+                            badge.innerText = "Пройден";
+                            badge.className = "status-badge status-done";
+                        }
+                    }
+                });
+            }
+
+            const percent = Math.round((completedCount / LESSONS.length) * 100);
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-text').innerText = `Пройдено ${completedCount} из ${LESSONS.length} уроков (${percent}%)`;
+
+        } catch (error) {
+            console.error("Ошибка загрузки прогресса:", error);
+        }
+    }
+
+    // Выход из системы
+    document.getElementById('btn-logout').addEventListener('click', () => {
+        signOut(auth).then(() => {
+            window.location.href = "index.html";
+        });
+    });
+</script>
+
+</body>
+</html>
